@@ -1,0 +1,21 @@
+{
+    "name": "React Native Expo",
+    "image": "mcr.microsoft.com/vscode/devcontainers/javascript-node:18",
+    "features": {
+      "ghcr.io/devcontainers/features/common-utils:1": {},
+      "ghcr.io/devcontainers/features/node:1": {
+        "version": "18"
+      }
+    },
+    "postCreateCommand": "npm install -g expo-cli",
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "dbaeumer.vscode-eslint",
+          "esbenp.prettier-vscode",
+          "formulahendry.auto-rename-tag"
+        ]
+      }
+    }
+  }
+  
