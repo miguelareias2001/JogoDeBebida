@@ -7,3 +7,6 @@ export const GAME_CONFIG = {
   MAX_ROTATIONS: 10,
   CHALLENGE_PROBABILITY: 0.5,
 };
+
+export const GameName = 'Jogo de Bebida';
+export const Configuracao = 'Configuração';
