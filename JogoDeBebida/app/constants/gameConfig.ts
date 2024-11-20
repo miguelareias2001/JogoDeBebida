@@ -11,3 +11,4 @@ export const GAME_CONFIG = {
 export const GameName = 'Jogo de Bebida';
 export const Config = 'Configuração';
 export const Remove = 'Remover';
+export const Finish = "Fim";
