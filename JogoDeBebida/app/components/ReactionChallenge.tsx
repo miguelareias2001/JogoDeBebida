@@ -53,6 +53,7 @@ const ReactionChallenge: React.FC<Props> = ({ player }) => {
         <Text style={styles.countdown}>{countdown}</Text>
       ) : !result ? (
         <TouchableOpacity style={styles.button} onPress={handlePress}>
+          {/* implement wheel of fortune */}
           <Text style={styles.buttonText}>Toque aqui assim que vir este texto!</Text>
         </TouchableOpacity>
       ) : null}

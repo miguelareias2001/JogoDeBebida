@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, FlatList, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+// Constants
+import { Remove } from '../constants/gameConfig';
+
 type RootStackParamList = {
   Config: undefined;
   Game: { players: string[] };
@@ -56,7 +59,7 @@ const ConfigScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.playerItem}>
             <Text>{item}</Text>
             <TouchableOpacity onPress={() => removePlayer(item)}>
-              <Text style={styles.removeText}>Remover</Text>
+              <Text style={styles.removeText}>{Remove}</Text>
             </TouchableOpacity>
           </View>
         )}

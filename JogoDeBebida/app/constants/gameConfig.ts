@@ -9,4 +9,5 @@ export const GAME_CONFIG = {
 };
 
 export const GameName = 'Jogo de Bebida';
-export const Configuracao = 'Configuração';
+export const Config = 'Configuração';
+export const Remove = 'Remover';

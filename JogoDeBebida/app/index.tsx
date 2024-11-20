@@ -11,7 +11,7 @@ import GameScreen from './screens/GameScreen';
 import { RootStackParamList } from './types/navigation';
 
 // Constants
-import { GameName, Configuracao} from './constants/gameConfig';
+import { GameName, Config} from './constants/gameConfig';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -23,7 +23,7 @@ export default function Index() {
           <Stack.Screen
             name="Config"
             component={ConfigScreen}
-            options={{ title: Configuracao }}
+            options={{ title: Config }}
           />
           <Stack.Screen
             name="Game"
