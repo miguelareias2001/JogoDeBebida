@@ -1,71 +1,98 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, Dimensions } from 'react-native';
 
 type Props = {
-  player: string;
+  player1: string;
+  player2: string;
+  onComplete: (winner: string, loser: string) => void;
 };
 
-const ReactionChallenge: React.FC<Props> = ({ player }) => {
-  const [countdown, setCountdown] = useState<number>(3);
+const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) => {
+  const [currentPlayer, setCurrentPlayer] = useState<'player1' | 'player2'>('player1');
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [reactionTime, setReactionTime] = useState<number | null>(null);
-  const [result, setResult] = useState<'success' | 'fail' | null>(null);
+  const [reactionTimes, setReactionTimes] = useState<{ [key: string]: number | null }>({
+    player1: null,
+    player2: null,
+  });
+  const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else {
-      const delay = Math.floor(Math.random() * 2000) + 1000;
-      timer = setTimeout(() => {
-        setStartTime(Date.now());
-      }, delay);
-    }
-    return () => clearTimeout(timer);
-  }, [countdown]);
+    // Show button in a random position after a random delay
+    const delay = Math.floor(Math.random() * 2000) + 1000; // Random delay between 1-2 seconds
+    const timeout = setTimeout(() => {
+      setStartTime(Date.now());
+      setButtonPosition({
+        top: Math.random() * (screenHeight - 100), // Random position on the screen
+        left: Math.random() * (screenWidth - 100),
+      });
+    }, delay);
+
+    return () => clearTimeout(timeout);
+  }, [currentPlayer]);
 
   const handlePress = () => {
     if (startTime) {
-      const timeTaken = Date.now() - startTime;
-      setReactionTime(timeTaken);
-      if (timeTaken <= 1000) {
-        setResult('success');
+      const reactionTime = Date.now() - startTime;
+      setReactionTimes((prev) => ({
+        ...prev,
+        [currentPlayer]: reactionTime,
+      }));
+
+      if (currentPlayer === 'player1') {
+        setCurrentPlayer('player2'); // Switch to player 2
+        setStartTime(null); // Reset start time for next player
       } else {
-        setResult('fail');
+        // Both players have finished, compare times
+        const player1Time = reactionTimes.player1;
+        const player2Time = reactionTime; // Current player's time
+        if (player1Time !== null && player2Time !== null) {
+          const winner = player1Time < player2Time ? player1 : player2;
+          const loser = player1Time < player2Time ? player2 : player1;
+          Alert.alert('Resultado', `${winner} venceu! ${loser} deve beber.`);
+          onComplete(winner, loser); // Notify parent component
+        }
       }
     }
   };
 
-  useEffect(() => {
-    if (result) {
-      Alert.alert(
-        result === 'success' ? 'Sucesso!' : 'Falhou!',
-        result === 'success'
-          ? `${player} reagiu a tempo!`
-          : `${player} não reagiu a tempo e deve beber!`
-      );
-    }
-  }, [result]);
-
   return (
     <View style={styles.container}>
-      {countdown > 0 ? (
-        <Text style={styles.countdown}>{countdown}</Text>
-      ) : !result ? (
-        <TouchableOpacity style={styles.button} onPress={handlePress}>
-          {/* implement wheel of fortune */}
-          <Text style={styles.buttonText}>Toque aqui assim que vir este texto!</Text>
-        </TouchableOpacity>
-      ) : null}
+      <Text style={styles.instructions}>
+        {currentPlayer === 'player1' ? `${player1}, prepara-te!` : `${player2}, prepara-te!`}
+      </Text>
+      {startTime && (
+        <TouchableOpacity
+          style={[styles.button, { top: buttonPosition.top, left: buttonPosition.left }]}
+          onPress={handlePress}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', marginTop: 20 },
-  countdown: { fontSize: 48 },
-  button: { padding: 20, backgroundColor: '#2196F3', borderRadius: 5 },
-  buttonText: { color: '#fff', fontSize: 18 },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instructions: {
+    fontSize: 18,
+    marginBottom: 20,
+  },
+  button: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    backgroundColor: 'red',
+    borderRadius: 25,
+  },
 });
 
 export default ReactionChallenge;
