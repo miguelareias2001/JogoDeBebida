@@ -8,3 +8,6 @@ export const validatePlayerName = (name: string, existingPlayers: string[]): boo
   const trimmedName = name.trim();
   return trimmedName !== '' && !existingPlayers.includes(trimmedName);
 };
+
+const GameUtilsComponent = () => null;
+export default GameUtilsComponent;

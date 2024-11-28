@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 
 type PlayerStats = {
@@ -82,3 +81,5 @@ export const useGameContext = () => {
   return context;
 };
 
+const GameContextComponent = () => null;
+export default GameContextComponent;

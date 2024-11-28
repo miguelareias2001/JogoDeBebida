@@ -1,7 +1,5 @@
-
 // Necessary tools
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Screens
@@ -17,21 +15,19 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 export default function Index() {
   return (
-    <NavigationContainer>
-      <GameProvider>
-        <Stack.Navigator initialRouteName="Config">
-          <Stack.Screen
-            name="Config"
-            component={ConfigScreen}
-            options={{ title: Config }}
-          />
-          <Stack.Screen
-            name="Game"
-            component={GameScreen}
-            options={{ title: GameName }}
-          />
-        </Stack.Navigator>
-      </GameProvider>
-    </NavigationContainer>
+    <GameProvider>
+      <Stack.Navigator initialRouteName="Config">
+        <Stack.Screen
+          name="Config"
+          component={ConfigScreen}
+          options={{ title: Config }}
+        />
+        <Stack.Screen
+          name="Game"
+          component={GameScreen}
+          options={{ title: GameName }}
+        />
+      </Stack.Navigator>
+    </GameProvider>
   );
 }
