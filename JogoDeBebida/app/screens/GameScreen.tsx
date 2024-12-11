@@ -34,7 +34,7 @@ const GameScreen: React.FC = () => {
   const startRound = () => {
     // Randomly select the next player
     const randomIndex = Math.floor(Math.random() * players.length);
-    const selectedPlayer = players[randomIndex].name;
+    const selectedPlayer = players[randomIndex]?.name || 'Unknown Player';
     setCurrentPlayer(selectedPlayer);
 
     // Notify the selected player to drink

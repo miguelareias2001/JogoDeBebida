@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, FlatList, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+} from 'react-native';
+import { useGameContext } from '../context/GameContext';
 import { StackNavigationProp } from '@react-navigation/stack';
-
-// Constants
-import { Remove } from '../constants/gameConfig';
 
 type RootStackParamList = {
   Config: undefined;
-  Game: { players: string[] };
+  Game: undefined;
 };
 
 type ConfigScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Config'>;
@@ -18,28 +25,38 @@ type Props = {
 
 const ConfigScreen: React.FC<Props> = ({ navigation }) => {
   const [playerName, setPlayerName] = useState('');
-  const [players, setPlayers] = useState<string[]>([]);
+  const [localPlayers, setLocalPlayers] = useState<string[]>([]); // Local state for players
+  const { setPlayers } = useGameContext(); // Get setPlayers from GameContext
 
   const addPlayer = () => {
     const trimmedName = playerName.trim();
-    if (trimmedName === '' || players.includes(trimmedName)) {
+    if (trimmedName === '' || localPlayers.includes(trimmedName)) {
       Alert.alert('Erro', 'Nome inválido ou duplicado!');
       return;
     }
-    setPlayers([...players, trimmedName]);
+    setLocalPlayers([...localPlayers, trimmedName]);
     setPlayerName('');
   };
 
   const removePlayer = (name: string) => {
-    setPlayers(players.filter(player => player !== name));
+    setLocalPlayers(localPlayers.filter((player) => player !== name));
   };
 
   const startGame = () => {
-    if (players.length < 2) {
+    if (localPlayers.length < 2) {
       Alert.alert('Erro', 'Adicione pelo menos dois jogadores para iniciar o jogo.');
       return;
     }
-    navigation.navigate('Game', { players });
+
+    // Pass players to GameContext and log the transformation for debugging
+    const transformedPlayers = localPlayers.map((name) => ({
+      name,
+      penalties: 0,
+    }));
+    console.log('Initialized Players:', transformedPlayers);
+
+    setPlayers(transformedPlayers);
+    navigation.navigate('Game');
   };
 
   return (
@@ -53,18 +70,18 @@ const ConfigScreen: React.FC<Props> = ({ navigation }) => {
       />
       <Button title="Adicionar" onPress={addPlayer} />
       <FlatList
-        data={players}
+        data={localPlayers}
         keyExtractor={(item) => item}
         renderItem={({ item }) => (
           <View style={styles.playerItem}>
             <Text>{item}</Text>
             <TouchableOpacity onPress={() => removePlayer(item)}>
-              <Text style={styles.removeText}>{Remove}</Text>
+              <Text style={styles.removeText}>Remover</Text>
             </TouchableOpacity>
           </View>
         )}
       />
-      <Button title="Iniciar Jogo" onPress={startGame} disabled={players.length < 2} />
+      <Button title="Iniciar Jogo" onPress={startGame} disabled={localPlayers.length < 2} />
     </View>
   );
 };

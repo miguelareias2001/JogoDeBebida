@@ -7,7 +7,7 @@ type PlayerStats = {
 
 type GameContextType = {
   players: PlayerStats[];
-  setPlayers: (players: string[]) => void;
+  setPlayers: (players: PlayerStats[]) => void;
   currentPlayer: string | null;
   setCurrentPlayer: (player: string | null) => void;
   getPlayerWithFewestPenalties: () => string;
@@ -21,9 +21,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
 
   // Initialize players with zero penalties
-  const setPlayers = (playerNames: string[]) => {
-    setPlayerStats(playerNames.map((name) => ({ name, penalties: 0 })));
-  };
+  const setPlayers = (players: PlayerStats[]) => {
+    setPlayerStats(players);
+  };  
 
   // Get the player with the fewest penalties
   const getPlayerWithFewestPenalties = (): string => {
