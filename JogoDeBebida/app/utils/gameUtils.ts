@@ -9,5 +9,5 @@ export const validatePlayerName = (name: string, existingPlayers: string[]): boo
   return trimmedName !== '' && !existingPlayers.includes(trimmedName);
 };
 
-const GameUtilsComponent = () => null;
+const GameUtilsComponent = (players: { name: string; penalties: number; }[]) => null;
 export default GameUtilsComponent;

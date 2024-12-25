@@ -1,71 +1,76 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useState, useContext } from 'react';
+import GAME_CONFIG from '../constants/gameConfig';
+import getPlayerWithFewestPenalties from '../utils/gameUtils';
 
-type PlayerStats = {
+type Player = {
   name: string;
   penalties: number;
 };
 
 type GameContextType = {
-  players: PlayerStats[];
-  setPlayers: (players: PlayerStats[]) => void;
-  currentPlayer: string | null;
-  setCurrentPlayer: (player: string | null) => void;
-  getPlayerWithFewestPenalties: () => string;
-  updatePenalties: (player1: string, player2: string, result: 'player1' | 'player2' | 'tie') => void;
+  players: Player[];
+  addPlayer: (name: string) => boolean;
+  removePlayer: (name: string) => void;
+  resetGame: () => void;
+  selectRandomPlayer: () => Player;
+  incrementPenalty: (playerName: string) => void;
+  getFewestPenaltiesPlayer: () => Player | null;
+  maybeTriggerChallenge: () => boolean;
 };
 
-const GameContext = createContext<GameContextType | undefined>(undefined);
+export const GameContext = createContext<GameContextType>({} as GameContextType);
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [players, setPlayerStats] = useState<PlayerStats[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
 
-  // Initialize players with zero penalties
-  const setPlayers = (players: PlayerStats[]) => {
-    setPlayerStats(players);
-  };  
-
-  // Get the player with the fewest penalties
-  const getPlayerWithFewestPenalties = (): string => {
-    const minPenalties = Math.min(...players.map((player) => player.penalties));
-    const candidates = players.filter((player) => player.penalties === minPenalties);
-
-    // Randomly choose one player if there is a tie
-    const randomIndex = Math.floor(Math.random() * candidates.length);
-    return candidates[randomIndex].name;
+  const addPlayer = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    if (players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) return false;
+    setPlayers(prev => [...prev, { name: trimmed, penalties: 0 }]);
+    return true;
   };
 
-  // Update penalties after a ReactionChallenge
-  const updatePenalties = (
-    player1: string,
-    player2: string,
-    result: 'player1' | 'player2' | 'tie'
-  ) => {
-    setPlayerStats((prevPlayers) =>
-      prevPlayers.map((player) => {
-        if (result === 'player1' && player.name === player2) {
-          return { ...player, penalties: player.penalties + 1 }; // Player 2 lost
-        }
-        if (result === 'player2' && player.name === player1) {
-          return { ...player, penalties: player.penalties + 1 }; // Player 1 lost
-        }
-        if (result === 'tie' && (player.name === player1 || player.name === player2)) {
-          return { ...player, penalties: player.penalties + 1 }; // Both players lost
-        }
-        return player; // No changes for others
-      })
+  const removePlayer = (name: string) => {
+    setPlayers(prev => prev.filter(p => p.name !== name));
+  };
+
+  const resetGame = () => {
+    setPlayers([]);
+  };
+
+  const selectRandomPlayer = () => {
+    const index = Math.floor(Math.random() * players.length);
+    return players[index];
+  };
+
+  const incrementPenalty = (playerName: string) => {
+    setPlayers(prev =>
+      prev.map(p =>
+        p.name === playerName ? { ...p, penalties: p.penalties + 1 } : p
+      )
     );
+  };
+
+  const getFewestPenaltiesPlayer = (): Player | null => {
+    return getPlayerWithFewestPenalties(players);
+  };
+
+  const maybeTriggerChallenge = () => {
+    return Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY;
   };
 
   return (
     <GameContext.Provider
       value={{
         players,
-        setPlayers,
-        currentPlayer,
-        setCurrentPlayer,
-        getPlayerWithFewestPenalties,
-        updatePenalties,
+        addPlayer,
+        removePlayer,
+        resetGame,
+        selectRandomPlayer,
+        incrementPenalty,
+        getFewestPenaltiesPlayer,
+        maybeTriggerChallenge,
       }}
     >
       {children}
@@ -73,13 +78,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useGameContext = () => {
-  const context = useContext(GameContext);
-  if (undefined === context) {
-    throw new Error('useGameContext must be used within a GameProvider');
-  }
-  return context;
-};
+export const useGame = () => useContext(GameContext);
 
-const GameContextComponent = () => null;
-export default GameContextComponent;
+export default GameProvider;

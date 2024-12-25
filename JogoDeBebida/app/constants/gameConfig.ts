@@ -4,7 +4,7 @@ export default {
   SPIN_DURATION: 3000,
   MIN_ROTATIONS: 5,
   MAX_ROTATIONS: 10,
-  CHALLENGE_PROBABILITY: 0.5,
+  CHALLENGE_PROBABILITY: 0.2,
 };
 
 export const GameName = 'Jogo de Bebida';

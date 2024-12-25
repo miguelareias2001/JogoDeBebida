@@ -1,76 +1,143 @@
-import React, { useState } from 'react';
-import { View, Button, Alert, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
+import { useGame } from '../context/GameContext';
 import ReactionChallenge from '../components/ReactionChallenge';
-import { useGameContext } from '../context/GameContext';
+import colors from '../theme/colors';
 
 const GameScreen: React.FC = () => {
   const {
     players,
-    currentPlayer,
-    setCurrentPlayer,
-    getPlayerWithFewestPenalties,
-    updatePenalties,
-  } = useGameContext();
+    selectRandomPlayer,
+    getFewestPenaltiesPlayer,
+    incrementPenalty,
+    maybeTriggerChallenge,
+  } = useGame();
+  
+  const [currentPlayerName, setCurrentPlayerName] = useState<string>('');
+  const [showChallenge, setShowChallenge] = useState(false);
+  const [challengePlayers, setChallengePlayers] = useState<{ player1: string; player2: string }>({
+    player1: '',
+    player2: '',
+  });
 
-  const [isChallenge, setIsChallenge] = useState(false);
-  const [opponent, setOpponent] = useState<string | null>(null);
+  // For simple bounce animation on chosen player
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  // Handles the end of the ReactionChallenge
-  const handleChallengeComplete = (winner: string, loser: string) => {
-    // Update penalties in the context based on the result
-    if (winner && loser) {
-      updatePenalties(winner, loser, winner === currentPlayer ? 'player2' : 'player1');
+  const animateSelection = () => {
+    scaleAnim.setValue(1);
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1.2,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handleNextRound = () => {
+    const chosenPlayer = selectRandomPlayer();
+    setCurrentPlayerName(chosenPlayer.name);
+    animateSelection();
+
+    // Decide if a challenge happens
+    if (maybeTriggerChallenge()) {
+      const fewestPenaltiesPlayer = getFewestPenaltiesPlayer();
+      if (fewestPenaltiesPlayer && fewestPenaltiesPlayer.name !== chosenPlayer.name) {
+        setChallengePlayers({
+          player1: chosenPlayer.name,
+          player2: fewestPenaltiesPlayer.name,
+        });
+        setShowChallenge(true);
+      } else {
+        // If there's no valid second player, just show normal flow
+        Alert.alert('Bebida!', `${chosenPlayer.name} bebeu!`);
+        incrementPenalty(chosenPlayer.name);
+      }
     } else {
-      updatePenalties(currentPlayer!, loser, 'tie');
-    }
-
-    // Notify players about the result and reset the game state
-    Alert.alert('Challenge Complete!', `${winner} won! ${loser} must drink.`);
-    setIsChallenge(false);
-    setOpponent(null);
-  };
-
-  // Starts a new round
-  const startRound = () => {
-    // Randomly select the next player
-    const randomIndex = Math.floor(Math.random() * players.length);
-    const selectedPlayer = players[randomIndex]?.name || 'Unknown Player';
-    setCurrentPlayer(selectedPlayer);
-
-    // Notify the selected player to drink
-    Alert.alert('Selection', `${selectedPlayer}, it's your turn to drink!`);
-
-    // Determine if a ReactionChallenge will occur (20% probability)
-    if (Math.random() < 0.2) {
-      // Select the opponent (player with the fewest penalties)
-      const selectedOpponent = getPlayerWithFewestPenalties();
-      setOpponent(selectedOpponent);
-      setIsChallenge(true);
-
-      // Announce the ReactionChallenge
-      Alert.alert('Reaction Challenge', `The opponent is ${selectedOpponent}!`);
+      // Normal round: just penalize the chosen player
+      Alert.alert('Bebida!', `${chosenPlayer.name} bebeu!`);
+      incrementPenalty(chosenPlayer.name);
     }
   };
+
+  const handleChallengeComplete = (winner: string, loser: string) => {
+    setShowChallenge(false);
+    // If it's a tie, both players lose
+    if (!winner && !loser) {
+      // tie scenario
+      incrementPenalty(challengePlayers.player1);
+      incrementPenalty(challengePlayers.player2);
+    } else {
+      incrementPenalty(loser);
+    }
+    // Reset for next round
+    setChallengePlayers({ player1: '', player2: '' });
+  };
+
+  useEffect(() => {
+    // Auto-select a player on mount
+    handleNextRound();
+  }, []);
 
   return (
     <View style={styles.container}>
-      {!isChallenge ? (
-        <Button title="Start Round" onPress={startRound} />
+      {showChallenge ? (
+        <ReactionChallenge
+          player1={challengePlayers.player1}
+          player2={challengePlayers.player2}
+          onComplete={handleChallengeComplete}
+        />
       ) : (
-        opponent && currentPlayer && (
-          <ReactionChallenge
-            player1={currentPlayer}
-            player2={opponent}
-            onComplete={handleChallengeComplete}
-          />
-        )
+        <View style={styles.roundContainer}>
+          <Animated.Text
+            style={[
+              styles.currentPlayer,
+              { transform: [{ scale: scaleAnim }] },
+            ]}
+          >
+            Jogador atual: {currentPlayerName}
+          </Animated.Text>
+          <TouchableOpacity style={styles.nextButton} onPress={handleNextRound}>
+            <Text style={styles.buttonText}>Próxima Rodada</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1 },
-});
-
 export default GameScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  roundContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  currentPlayer: {
+    color: colors.text,
+    fontSize: 24,
+    marginBottom: 24,
+  },
+  nextButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});

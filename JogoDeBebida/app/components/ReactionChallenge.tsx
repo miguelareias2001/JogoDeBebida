@@ -1,5 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, Dimensions } from 'react-native';
+
+// Uncomment these if using expo-av for sounds
+// import { Audio } from 'expo-av';
+
+// Uncomment if using expo-haptics
+// import * as Haptics from 'expo-haptics';
 
 type Props = {
   player1: string;
@@ -7,56 +13,84 @@ type Props = {
   onComplete: (winner: string, loser: string) => void;
 };
 
+const BUTTON_SIZE = 50;
+const MARGIN = 40;
+
 const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) => {
   const [currentPlayer, setCurrentPlayer] = useState<'player1' | 'player2'>('player1');
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [reactionTimes, setReactionTimes] = useState<{ [key: string]: number | null }>({
-    player1: null,
-    player2: null,
-  });
-  const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
-  });
 
+  const [player1Time, setPlayer1Time] = useState<number | null>(null);
+  const [player2Time, setPlayer2Time] = useState<number | null>(null);
+
+  const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
 
-  useEffect(() => {
-    // Show button in a random position after a random delay
-    const delay = Math.floor(Math.random() * 2000) + 1000; // Random delay between 1-2 seconds
-    const timeout = setTimeout(() => {
-      setStartTime(Date.now());
-      setButtonPosition({
-        top: Math.random() * (screenHeight - 100), // Random position on the screen
-        left: Math.random() * (screenWidth - 100),
-      });
-    }, delay);
+  // Optional: for sounds
+  // const [appearSound, setAppearSound] = useState<Audio.Sound | null>(null);
 
-    return () => clearTimeout(timeout);
+  // useEffect(() => {
+  //   // Load the sound
+  //   Audio.Sound.createAsync(require('../assets/button_appear.mp3'))
+  //     .then(({ sound }) => setAppearSound(sound))
+  //     .catch(err => console.log('Error loading sound', err));
+  //   return () => {
+  //     if (appearSound) {
+  //       appearSound.unloadAsync();
+  //     }
+  //   };
+  // }, []);
+
+  useEffect(() => {
+    if (currentPlayer !== null) {
+      // Introduce a random delay before the button appears
+      const delay = Math.floor(Math.random() * 2000) + 1000;
+      const timeout = setTimeout(() => {
+        setStartTime(Date.now());
+        
+        // Randomly position the button such that it remains on screen
+        const newTop = Math.random() * (screenHeight - BUTTON_SIZE - MARGIN);
+        const newLeft = Math.random() * (screenWidth - BUTTON_SIZE - MARGIN);
+        setButtonPosition({ top: newTop, left: newLeft });
+
+        // Optional haptic feedback
+        // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        // Optional play sound
+        // if (appearSound) {
+        //   appearSound.replayAsync();
+        // }
+      }, delay);
+
+      return () => clearTimeout(timeout);
+    }
   }, [currentPlayer]);
+
+  // Compare times once both players have reacted
+  useEffect(() => {
+    if (player1Time !== null && player2Time !== null) {
+      if (player1Time === player2Time) {
+        Alert.alert('Empate!', 'Ambos devem beber!');
+        onComplete('', ''); // Indicate tie scenario
+      } else {
+        const winner = player1Time < player2Time ? player1 : player2;
+        const loser = player1Time < player2Time ? player2 : player1;
+        Alert.alert('Resultado', `${winner} venceu! ${loser} deve beber.`);
+        onComplete(winner, loser);
+      }
+    }
+  }, [player1Time, player2Time]);
 
   const handlePress = () => {
     if (startTime) {
       const reactionTime = Date.now() - startTime;
-      setReactionTimes((prev) => ({
-        ...prev,
-        [currentPlayer]: reactionTime,
-      }));
-
       if (currentPlayer === 'player1') {
-        setCurrentPlayer('player2'); // Switch to player 2
-        setStartTime(null); // Reset start time for next player
+        setPlayer1Time(reactionTime);
+        setCurrentPlayer('player2');
+        setStartTime(null); // Reset to wait for next player's button
       } else {
-        // Both players have finished, compare times
-        const player1Time = reactionTimes.player1;
-        const player2Time = reactionTime; // Current player's time
-        if (player1Time !== null && player2Time !== null) {
-          const winner = player1Time < player2Time ? player1 : player2;
-          const loser = player1Time < player2Time ? player2 : player1;
-          Alert.alert('Resultado', `${winner} venceu! ${loser} deve beber.`);
-          onComplete(winner, loser); // Notify parent component
-        }
+        setPlayer2Time(reactionTime);
       }
     }
   };
@@ -64,11 +98,16 @@ const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) =>
   return (
     <View style={styles.container}>
       <Text style={styles.instructions}>
-        {currentPlayer === 'player1' ? `${player1}, prepara-te!` : `${player2}, prepara-te!`}
+        {currentPlayer === 'player1'
+          ? `${player1}, prepara-te!`
+          : `${player2}, prepara-te!`}
       </Text>
       {startTime && (
         <TouchableOpacity
-          style={[styles.button, { top: buttonPosition.top, left: buttonPosition.left }]}
+          style={[styles.button, {
+            top: buttonPosition.top,
+            left: buttonPosition.left
+          }]}
           onPress={handlePress}
         />
       )}
@@ -76,23 +115,25 @@ const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) =>
   );
 };
 
+export default ReactionChallenge;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 20
   },
   instructions: {
     fontSize: 18,
     marginBottom: 20,
+    color: '#FFFFFF'
   },
   button: {
     position: 'absolute',
-    width: 50,
-    height: 50,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
     backgroundColor: 'red',
-    borderRadius: 25,
+    borderRadius: BUTTON_SIZE / 2
   },
 });
-
-export default ReactionChallenge;
