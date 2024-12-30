@@ -11,6 +11,7 @@ const GameScreen: React.FC = () => {
     getFewestPenaltiesPlayer,
     incrementPenalty,
     maybeTriggerChallenge,
+    getOpponentWithFewestPenalties,
   } = useGame();
   
   const [currentPlayerName, setCurrentPlayerName] = useState<string>('');
@@ -44,23 +45,18 @@ const GameScreen: React.FC = () => {
     setCurrentPlayerName(chosenPlayer.name);
     animateSelection();
 
-    // Decide if a challenge happens
     if (maybeTriggerChallenge()) {
-      const fewestPenaltiesPlayer = getFewestPenaltiesPlayer();
-      if (fewestPenaltiesPlayer && fewestPenaltiesPlayer.name !== chosenPlayer.name) {
+      const opponent = getOpponentWithFewestPenalties(chosenPlayer.name);
+      if (opponent) {
         setChallengePlayers({
           player1: chosenPlayer.name,
-          player2: fewestPenaltiesPlayer.name,
+          player2: opponent.name,
         });
         setShowChallenge(true);
       } else {
-        // If there's no valid second player, just show normal flow
-        Alert.alert('Bebida!', `${chosenPlayer.name} bebeu!`);
         incrementPenalty(chosenPlayer.name);
       }
     } else {
-      // Normal round: just penalize the chosen player
-      Alert.alert('Bebida!', `${chosenPlayer.name} bebeu!`);
       incrementPenalty(chosenPlayer.name);
     }
   };
@@ -80,8 +76,6 @@ const GameScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    // Auto-select a player on mount
-    handleNextRound();
   }, []);
 
   return (

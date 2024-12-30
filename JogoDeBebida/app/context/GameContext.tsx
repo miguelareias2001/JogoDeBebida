@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext } from 'react';
 import GAME_CONFIG from '../constants/gameConfig';
-import getPlayerWithFewestPenalties from '../utils/gameUtils';
+import getPlayerWithFewestPenalties, { getOpponentWithFewestPenalties as findOpponentWithFewestPenalties } from '../utils/gameUtils';
 
 type Player = {
   name: string;
@@ -16,6 +16,7 @@ type GameContextType = {
   incrementPenalty: (playerName: string) => void;
   getFewestPenaltiesPlayer: () => Player | null;
   maybeTriggerChallenge: () => boolean;
+  getOpponentWithFewestPenalties: (chosenPlayerName: string) => Player | null;
 };
 
 export const GameContext = createContext<GameContextType>({} as GameContextType);
@@ -60,6 +61,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY;
   };
 
+  const getOpponentWithFewestPenalties = (chosenPlayerName: string): Player | null => {
+    return findOpponentWithFewestPenalties(players, chosenPlayerName);
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -71,6 +76,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         incrementPenalty,
         getFewestPenaltiesPlayer,
         maybeTriggerChallenge,
+        getOpponentWithFewestPenalties,
       }}
     >
       {children}
