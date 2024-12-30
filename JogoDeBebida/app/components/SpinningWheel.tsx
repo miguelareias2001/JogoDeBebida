@@ -1,15 +1,13 @@
-
-import React, { useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Animated, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 interface SpinningWheelProps {
   players: string[];
-  spinning: boolean;
   onSpinComplete: (player: string) => void;
 }
 
-const SpinningWheel: React.FC<SpinningWheelProps> = ({ players, spinning, onSpinComplete }) => {
+const SpinningWheel: React.FC<SpinningWheelProps> = ({ players, onSpinComplete }) => {
   const spinValue = useRef(new Animated.Value(0)).current;
   const windowWidth = Dimensions.get('window').width;
   const wheelSize = windowWidth * 0.8;
@@ -59,6 +57,9 @@ const SpinningWheel: React.FC<SpinningWheelProps> = ({ players, spinning, onSpin
           ))}
         </Animated.View>
       </BlurView>
+      <TouchableOpacity style={styles.button} onPress={spin}>
+        <Text style={styles.buttonText}>Spin the Bottle</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -85,6 +86,16 @@ const styles = StyleSheet.create({
     width: '50%',
     height: 2,
     transformOrigin: 'left center',
+  },
+  button: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#2196F3',
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
   },
 });
 

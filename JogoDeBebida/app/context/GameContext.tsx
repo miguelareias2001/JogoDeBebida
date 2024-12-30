@@ -1,30 +1,90 @@
+import React, { createContext, useState, useContext } from 'react';
+import { GAME_CONFIG } from '../constants/gameConfig';
+import getPlayerWithFewestPenalties, { getOpponentWithFewestPenalties as findOpponentWithFewestPenalties } from '../utils/gameUtils';
 
-import React, { createContext, useContext, useState } from 'react';
-
-type GameContextType = {
-  players: string[];
-  setPlayers: (players: string[]) => void;
-  currentPlayer: string | null;
-  setCurrentPlayer: (player: string | null) => void;
+type Player = {
+  name: string;
+  penalties: number;
 };
 
-const GameContext = createContext<GameContextType | undefined>(undefined);
+type GameContextType = {
+  players: Player[];
+  addPlayer: (name: string) => boolean;
+  removePlayer: (name: string) => void;
+  resetGame: () => void;
+  selectRandomPlayer: () => Player | null;
+  incrementPenalty: (playerName: string) => void;
+  getFewestPenaltiesPlayer: () => Player | null;
+  maybeTriggerChallenge: () => boolean;
+  getOpponentWithFewestPenalties: (chosenPlayerName: string) => Player | null;
+};
+
+export const GameContext = createContext<GameContextType>({} as GameContextType);
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [players, setPlayers] = useState<string[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+
+  const addPlayer = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    if (players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) return false;
+    setPlayers(prev => [...prev, { name: trimmed, penalties: 0 }]);
+    return true;
+  };
+
+  const removePlayer = (name: string) => {
+    setPlayers(prev => prev.filter(p => p.name !== name));
+  };
+
+  const resetGame = () => {
+    setPlayers([]);
+  };
+
+  const selectRandomPlayer = () => {
+    if (players.length === 0) return null;
+    const index = Math.floor(Math.random() * players.length);
+    return players[index];
+  };
+
+  const incrementPenalty = (playerName: string) => {
+    setPlayers(prev =>
+      prev.map(p =>
+        p.name === playerName ? { ...p, penalties: p.penalties + 1 } : p
+      )
+    );
+  };
+
+  const getFewestPenaltiesPlayer = (): Player | null => {
+    return getPlayerWithFewestPenalties(players);
+  };
+
+  const maybeTriggerChallenge = () => {
+    return Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY;
+  };
+
+  const getOpponentWithFewestPenalties = (chosenPlayerName: string): Player | null => {
+    return findOpponentWithFewestPenalties(players, chosenPlayerName);
+  };
 
   return (
-    <GameContext.Provider value={{ players, setPlayers, currentPlayer, setCurrentPlayer }}>
+    <GameContext.Provider
+      value={{
+        players,
+        addPlayer,
+        removePlayer,
+        resetGame,
+        selectRandomPlayer,
+        incrementPenalty,
+        getFewestPenaltiesPlayer,
+        maybeTriggerChallenge,
+        getOpponentWithFewestPenalties,
+      }}
+    >
       {children}
     </GameContext.Provider>
   );
 };
 
-export const useGameContext = () => {
-  const context = useContext(GameContext);
-  if (undefined === context) {
-    throw new Error('useGameContext must be used within a GameProvider');
-  }
-  return context;
-};
+export const useGame = () => useContext(GameContext);
+
+export default GameProvider;

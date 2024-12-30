@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 
+
 type Props = {
-  player: string;
+
+  player1: string;
+
+  player2: string;
+
+  onComplete: (winner: string, loser: string) => void;
+
 };
 
-const ReactionChallenge: React.FC<Props> = ({ player }) => {
+const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) => {
   const [countdown, setCountdown] = useState<number>(3);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [reactionTime, setReactionTime] = useState<number | null>(null);
@@ -41,8 +48,8 @@ const ReactionChallenge: React.FC<Props> = ({ player }) => {
       Alert.alert(
         result === 'success' ? 'Sucesso!' : 'Falhou!',
         result === 'success'
-          ? `${player} reagiu a tempo!`
-          : `${player} não reagiu a tempo e deve beber!`
+          ? `${player1} reagiu a tempo!`
+          : `${player2} não reagiu a tempo e deve beber!`
       );
     }
   }, [result]);
