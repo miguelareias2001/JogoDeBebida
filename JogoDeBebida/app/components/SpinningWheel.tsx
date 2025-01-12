@@ -1,68 +1,92 @@
-import React, { useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
-import { BlurView } from 'expo-blur';
+import React, { useRef, useState } from 'react';
+import {
+  View,
+  Animated,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
 import bottleImage from '../../assets/images/bottle.png';
 
 interface SpinningWheelProps {
-  /**
-   * An array of items to display around the circle.
-   * Example: ['Filipe', 'Miguel', 'Gustavo', 'All players drink'].
-   */
   items: string[];
-  /**
-   * A callback that receives the final chosen item
-   * after the spin completes.
-   */
   onSpinComplete: (result: string) => void;
-  /**
-   * A callback invoked right before spinning, allowing
-   * the parent to decide which item will be selected.
-   * (If omitted, no spin will occur.)
-   */
-  onSpinStart?: () => string | null;
+  onSpinStart?: () => void;
 }
 
-const SpinningWheel: React.FC<SpinningWheelProps> = ({ items, onSpinComplete, onSpinStart }) => {
-  // We use an Animated.Value that we'll rotate from 0..360 degrees
+const SpinningWheel: React.FC<SpinningWheelProps> = ({
+  items,
+  onSpinComplete,
+  onSpinStart,
+}) => {
+
+  const BOTTLE_IMAGE_OFFSET = '0deg';
   const spinValue = useRef(new Animated.Value(0)).current;
-  
-  // Container size: 80% of screen width for a circle
   const windowWidth = Dimensions.get('window').width;
   const CONTAINER_SIZE = windowWidth * 0.8;
+  const [isSpinning, setIsSpinning] = useState(false);
 
-  // Called when user taps "Spin the Bottle"
-  const spin = () => {
-    // 1) Ask the parent which item should we land on
-    const result = onSpinStart ? onSpinStart() : null;
-    if (!result) {
-      // If null or undefined, we skip spinning
-      return;
-    }
+  const segmentAngle = 360 / items.length;
+  const halfSegment = segmentAngle / 2;
 
-    // 2) Find the index of that item so we know the target angle
-    const selectedIndex = items.indexOf(result);
-    if (selectedIndex < 0) {
-      // If we can't find the item, skip
-      return;
-    }
-    const targetAngle = (360 / items.length) * selectedIndex;
+  const indexRanges = items.map((_, i) => {
+    const midAngle = i * segmentAngle;
+    const start = midAngle - halfSegment;
+    const end = midAngle + halfSegment;
+    return { i, start, end };
+  });
 
-    // 3) Add random full rotations so it doesn't look too predictable
-    const randomRotations = 5 + Math.random() * 5; // 5-10 rotations
-    const toValue = randomRotations * 360 + targetAngle;
+  const spinBottle = () => {
+    if (isSpinning) return;
+    if (onSpinStart) onSpinStart();
 
-    // 4) Animate the spin
-    Animated.timing(spinValue, {
-      toValue,
-      duration: 3000, // 3 seconds
+    setIsSpinning(true);
+
+    const initialVelocity = 2000 + Math.random() * 1000;
+
+    Animated.decay(spinValue, {
+      velocity: initialVelocity,
+      deceleration: 0.995,
       useNativeDriver: true,
-    }).start(() => {
-      // 5) Notify the parent that we landed on `result`
-      onSpinComplete(result);
+    }).start(({ finished }) => {
+      if (!finished) return;
+
+      spinValue.extractOffset();
+
+      const rawAngle = spinValue.__getValue() % 360;
+      const finalAngle = (rawAngle + 360) % 360;
+
+      console.log(`Final Angle: ${finalAngle}`);
+
+      let chosenIndex = 0;
+
+      for (let r = 0; r < indexRanges.length; r++) {
+        let { i, start, end } = indexRanges[r];
+
+        const normStart = (start + 360) % 360;
+        const normEnd = (end + 360) % 360;
+
+        if (normStart < normEnd) {
+          if (finalAngle >= normStart && finalAngle < normEnd) {
+            chosenIndex = i;
+            break;
+          }
+        } else {
+          if (finalAngle >= normStart || finalAngle < normEnd) {
+            chosenIndex = i;
+            break;
+          }
+        }
+      }
+
+      const chosenItem = items[chosenIndex];
+      console.log(`Chosen Item: ${chosenItem}`);
+      onSpinComplete(chosenItem);
+      setIsSpinning(false);
     });
   };
 
-  // Map 0..360 in spinValue to '0deg'..'360deg'
   const rotate = spinValue.interpolate({
     inputRange: [0, 360],
     outputRange: ['0deg', '360deg'],
@@ -70,11 +94,10 @@ const SpinningWheel: React.FC<SpinningWheelProps> = ({ items, onSpinComplete, on
 
   return (
     <View style={[styles.container, { width: CONTAINER_SIZE, height: CONTAINER_SIZE }]}>
-      {/* 1) Render each item label around the circle */}
       {items.map((label, i) => {
         const angle = (360 / items.length) * i;
         const radians = (angle * Math.PI) / 180;
-        const radius = (CONTAINER_SIZE / 2) - 40; // distance from center
+        const radius = (CONTAINER_SIZE / 2) - 40;
         const x = radius * Math.cos(radians);
         const y = radius * Math.sin(radians);
 
@@ -94,21 +117,19 @@ const SpinningWheel: React.FC<SpinningWheelProps> = ({ items, onSpinComplete, on
         );
       })}
 
-      {/* 2) The spinning bottle in the center */}
       <Animated.Image
         source={bottleImage}
         style={[
           styles.bottle,
           {
             transform: [{ rotate }],
-            top: (CONTAINER_SIZE / 2) - 50, // center bottle
+            top: (CONTAINER_SIZE / 2) - 50,
             left: (CONTAINER_SIZE / 2) - 25,
           },
         ]}
       />
 
-      {/* 3) The "Spin the Bottle" button */}
-      <TouchableOpacity style={styles.spinButton} onPress={spin}>
+      <TouchableOpacity style={styles.spinButton} onPress={spinBottle}>
         <Text style={styles.spinButtonText}>Spin the Bottle</Text>
       </TouchableOpacity>
     </View>
@@ -136,7 +157,7 @@ const styles = StyleSheet.create({
   bottle: {
     position: 'absolute',
     width: 50,
-    height: 100, // Adjust to match your bottle image
+    height: 100,
   },
   spinButton: {
     position: 'absolute',
