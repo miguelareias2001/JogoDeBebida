@@ -25,8 +25,8 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
     const fullSpins = Math.floor(Math.random() * 4) + 3; // 3 a 6 voltas
     const segmentAngle = 360 / options.length; // Ângulo por opção
     const randomSegment = Math.floor(Math.random() * options.length); // Segmento aleatório
-    // Ajusta o ângulo final para que a ponta (90° à direita) aponte para o segmento
-    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle - 90;
+    // Ajusta o ângulo final para que a ponta (0° à direita) aponte para o segmento
+    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle;
 
     Animated.timing(spinValue, {
       toValue: finalAngle,
@@ -34,8 +34,12 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      const normalizedAngle = (finalAngle + 90) % 360; // Ajusta para o segmento
-      const selectedIndex = Math.floor(normalizedAngle / segmentAngle);
+      // Normaliza o ângulo final (0 a 360°)
+      const normalizedAngle = finalAngle % 360;
+      // Calcula o índice com base no ângulo, ajustando para o sentido horário
+      const selectedIndex =
+        (options.length - Math.floor(normalizedAngle / segmentAngle)) %
+        options.length;
       setSelectedOption(options[selectedIndex]);
     });
   };
@@ -127,7 +131,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 25,
     borderTopRightRadius: 10,
     borderBottomRightRadius: 10,
-    borderRightWidth: 20, // Simula a "ponta" mais larga à direita
+    borderRightWidth: 20,
     borderColor: '#8B4513',
   },
   button: {
