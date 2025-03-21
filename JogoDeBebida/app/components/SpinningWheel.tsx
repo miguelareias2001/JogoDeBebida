@@ -1,174 +1,108 @@
-import React, { useRef, useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
-  Animated,
-  StyleSheet,
-  Dimensions,
   TouchableOpacity,
   Text,
+  Animated,
+  Easing,
+  StyleSheet,
 } from 'react-native';
-import bottleImage from '../../assets/images/bottle.png';
 
-interface SpinningWheelProps {
-  items: string[];
-  onSpinComplete: (result: string) => void;
-  onSpinStart?: () => void;
+// Props do componente
+interface SpinningBottleProps {
+  options: string[];
 }
 
-const SpinningWheel: React.FC<SpinningWheelProps> = ({
-  items,
-  onSpinComplete,
-  onSpinStart,
-}) => {
-
-  const BOTTLE_IMAGE_OFFSET = '0deg';
+const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const spinValue = useRef(new Animated.Value(0)).current;
-  const windowWidth = Dimensions.get('window').width;
-  const CONTAINER_SIZE = windowWidth * 0.8;
-  const [isSpinning, setIsSpinning] = useState(false);
 
-  const segmentAngle = 360 / items.length;
-  const halfSegment = segmentAngle / 2;
-
-  const indexRanges = items.map((_, i) => {
-    const midAngle = i * segmentAngle;
-    const start = midAngle - halfSegment;
-    const end = midAngle + halfSegment;
-    return { i, start, end };
-  });
-
+  // Função para iniciar o giro
   const spinBottle = () => {
-    if (isSpinning) return;
-    if (onSpinStart) onSpinStart();
+    // Reseta o valor de rotação e a opção selecionada
+    spinValue.setValue(0);
+    setSelectedOption(null);
 
-    setIsSpinning(true);
+    // Gera um número aleatório de rotações completas (entre 3 e 6) e um ângulo final
+    const fullSpins = Math.floor(Math.random() * 4) + 3; // 3 a 6 voltas
+    const segmentAngle = 360 / options.length; // Ângulo por opção
+    const randomSegment = Math.floor(Math.random() * options.length); // Segmento aleatório
+    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle;
 
-    const initialVelocity = 2000 + Math.random() * 1000;
-
-    Animated.decay(spinValue, {
-      velocity: initialVelocity,
-      deceleration: 0.995,
+    // Animação de rotação
+    Animated.timing(spinValue, {
+      toValue: finalAngle,
+      duration: 3000, // 3 segundos de animação
+      easing: Easing.out(Easing.cubic), // Desaceleração suave
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (!finished) return;
-
-      spinValue.extractOffset();
-
-      const rawAngle = spinValue.__getValue() % 360;
-      const finalAngle = (rawAngle + 360) % 360;
-
-      console.log(`Final Angle: ${finalAngle}`);
-
-      let chosenIndex = 0;
-
-      for (let r = 0; r < indexRanges.length; r++) {
-        let { i, start, end } = indexRanges[r];
-
-        const normStart = (start + 360) % 360;
-        const normEnd = (end + 360) % 360;
-
-        if (normStart < normEnd) {
-          if (finalAngle >= normStart && finalAngle < normEnd) {
-            chosenIndex = i;
-            break;
-          }
-        } else {
-          if (finalAngle >= normStart || finalAngle < normEnd) {
-            chosenIndex = i;
-            break;
-          }
-        }
-      }
-
-      const chosenItem = items[chosenIndex];
-      console.log(`Chosen Item: ${chosenItem}`);
-      onSpinComplete(chosenItem);
-      setIsSpinning(false);
+    }).start(() => {
+      // Calcula o ângulo final normalizado (0 a 360°)
+      const normalizedAngle = finalAngle % 360;
+      const selectedIndex = Math.floor(normalizedAngle / segmentAngle);
+      setSelectedOption(options[selectedIndex]);
     });
   };
 
-  const rotate = spinValue.interpolate({
+  // Interpolação para aplicar a rotação na imagem
+  const spin = spinValue.interpolate({
     inputRange: [0, 360],
     outputRange: ['0deg', '360deg'],
   });
 
   return (
-    <View style={[styles.container, { width: CONTAINER_SIZE, height: CONTAINER_SIZE }]}>
-      {items.map((label, i) => {
-        const angle = (360 / items.length) * i;
-        const radians = (angle * Math.PI) / 180;
-        const radius = (CONTAINER_SIZE / 2) - 40;
-        const x = radius * Math.cos(radians);
-        const y = radius * Math.sin(radians);
+    <View style={styles.container}>
+      {/* Garrafa giratória (simulada como um retângulo por falta de imagem real) */}
+      <Animated.View style={[styles.bottle, { transform: [{ rotate: spin }] }]}>
+        <View style={styles.bottleShape} />
+      </Animated.View>
 
-        return (
-          <View
-            key={label}
-            style={[
-              styles.labelContainer,
-              {
-                top: (CONTAINER_SIZE / 2) + y - 10,
-                left: (CONTAINER_SIZE / 2) + x - 30,
-              },
-            ]}
-          >
-            <Text style={styles.labelText}>{label}</Text>
-          </View>
-        );
-      })}
-
-      <Animated.Image
-        source={bottleImage}
-        style={[
-          styles.bottle,
-          {
-            transform: [{ rotate }],
-            top: (CONTAINER_SIZE / 2) - 50,
-            left: (CONTAINER_SIZE / 2) - 25,
-          },
-        ]}
-      />
-
-      <TouchableOpacity style={styles.spinButton} onPress={spinBottle}>
-        <Text style={styles.spinButtonText}>Spin the Bottle</Text>
+      {/* Botão para girar */}
+      <TouchableOpacity style={styles.button} onPress={spinBottle}>
+        <Text style={styles.buttonText}>Girar</Text>
       </TouchableOpacity>
+
+      {/* Exibe o resultado */}
+      {selectedOption && (
+        <Text style={styles.result}>Selecionado: {selectedOption}</Text>
+      )}
     </View>
   );
 };
 
-export default SpinningWheel;
-
+// Estilos
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  labelContainer: {
-    position: 'absolute',
-  },
-  labelText: {
-    color: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    fontSize: 14,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
   bottle: {
-    position: 'absolute',
-    width: 50,
-    height: 100,
+    width: 200,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  spinButton: {
-    position: 'absolute',
-    bottom: 0,
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
+  bottleShape: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#8B4513', // Cor marrom para simular uma garrafa
+    borderRadius: 25,
   },
-  spinButtonText: {
-    color: '#fff',
+  button: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#1E90FF',
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#FFF',
     fontSize: 16,
   },
+  result: {
+    marginTop: 20,
+    fontSize: 18,
+    color: '#333',
+  },
 });
+
+export default SpinningBottle;

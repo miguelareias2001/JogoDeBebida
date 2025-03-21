@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Alert } from 'react-native';
 import { useGame } from '../context/GameContext';
 import ReactionChallenge from '../components/ReactionChallenge';
-import SpinningWheel from '../components/SpinningWheel';
 import colors from '../theme/colors';
-import { GAME_CONFIG } from '../constants/gameConfig';
+import GAME_CONFIG from '../constants/gameConfig';
+import SpinningBottle from '../components/SpinningWheel';
 
 const GameScreen: React.FC = () => {
   const {
@@ -137,15 +137,7 @@ const GameScreen: React.FC = () => {
   // Otherwise, show the bottle + any message
   return (
     <View style={styles.container}>
-      <SpinningWheel
-        items={[
-          // No "Reaction Challenge" label here
-          ...players.map((p) => p.name),
-          'All players drink',
-        ]}
-        onSpinStart={handleSpinStart}
-        onSpinComplete={handleSpinComplete}
-      />
+      <SpinningBottle options={["1212","wiuejdn", "wjbedij"]} />
       {!!currentResult && (
         <Animated.Text
           style={[
