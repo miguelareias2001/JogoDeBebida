@@ -1,5 +1,4 @@
-
-export const GAME_CONFIG = {
+export default {
   MIN_PLAYERS: 2,
   MAX_REACTION_TIME: 1000,
   SPIN_DURATION: 3000,

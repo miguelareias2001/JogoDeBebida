@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext } from 'react';
-import { GAME_CONFIG } from '../constants/gameConfig';
+import GAME_CONFIG from '../constants/gameConfig';
 import getPlayerWithFewestPenalties, { getOpponentWithFewestPenalties as findOpponentWithFewestPenalties } from '../utils/gameUtils';
 
 type Player = {
@@ -87,4 +87,5 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useGame = () => useContext(GameContext);
 
-export default GameProvider;
+const GameContextComponent = () => null;
+export default GameContextComponent;
