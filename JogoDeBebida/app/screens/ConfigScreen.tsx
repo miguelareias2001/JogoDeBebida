@@ -1,80 +1,143 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, FlatList, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useGame } from '../context/GameContext';
+import GAME_CONFIG, { Remove } from '../constants/gameConfig';
+import colors from '../theme/colors';
 
-// Constants
-import { Remove } from '../constants/gameConfig';
+const ConfigScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const { players, addPlayer, removePlayer } = useGame();
 
-type RootStackParamList = {
-  Config: undefined;
-  Game: { players: string[] };
-};
-
-type ConfigScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Config'>;
-
-type Props = {
-  navigation: ConfigScreenNavigationProp;
-};
-
-const ConfigScreen: React.FC<Props> = ({ navigation }) => {
   const [playerName, setPlayerName] = useState('');
-  const [players, setPlayers] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const addPlayer = () => {
-    const trimmedName = playerName.trim();
-    if (trimmedName === '' || players.includes(trimmedName)) {
-      Alert.alert('Erro', 'Nome inválido ou duplicado!');
-      return;
+  const handleAddPlayer = () => {
+    const success = addPlayer(playerName);
+    if (!success) {
+      setError('Nome inválido ou duplicado!');
+    } else {
+      setError(null);
+      setPlayerName('');
     }
-    setPlayers([...players, trimmedName]);
-    setPlayerName('');
   };
 
-  const removePlayer = (name: string) => {
-    setPlayers(players.filter(player => player !== name));
+  const handleStartGame = () => {
+    // Navigate to Game Screen
+    navigation.navigate('Game' as never);
   };
 
-  const startGame = () => {
-    if (players.length < 2) {
-      Alert.alert('Erro', 'Adicione pelo menos dois jogadores para iniciar o jogo.');
-      return;
-    }
-    navigation.navigate('Game', { players });
-  };
+  const canStartGame = players.length >= GAME_CONFIG.MIN_PLAYERS;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Insira os nomes dos jogadores:</Text>
-      <TextInput
-        style={styles.input}
-        value={playerName}
-        onChangeText={setPlayerName}
-        placeholder="Nome do jogador"
-      />
-      <Button title="Adicionar" onPress={addPlayer} />
+      <Text style={styles.title}>Adicionar Jogadores</Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nome do jogador"
+          placeholderTextColor={colors.textSecondary}
+          value={playerName}
+          onChangeText={setPlayerName}
+        />
+        {error && <Text style={styles.errorText}>{error}</Text>}
+        <TouchableOpacity style={styles.addButton} onPress={handleAddPlayer}>
+          <Text style={styles.addButtonText}>Adicionar</Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={players}
-        keyExtractor={(item) => item}
+        keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
-          <View style={styles.playerItem}>
-            <Text>{item}</Text>
-            <TouchableOpacity onPress={() => removePlayer(item)}>
+          <View style={styles.playerRow}>
+            <Text style={styles.playerName}>{item.name}</Text>
+            <TouchableOpacity onPress={() => removePlayer(item.name)}>
               <Text style={styles.removeText}>{Remove}</Text>
             </TouchableOpacity>
           </View>
         )}
       />
-      <Button title="Iniciar Jogo" onPress={startGame} disabled={players.length < 2} />
+
+      <TouchableOpacity
+        style={[styles.startButton, { opacity: canStartGame ? 1 : 0.5 }]}
+        onPress={handleStartGame}
+        disabled={!canStartGame}
+      >
+        <Text style={styles.startButtonText}>
+          {canStartGame ? 'Iniciar Jogo' : 'Mínimo 2 jogadores'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1 },
-  title: { fontSize: 18, marginBottom: 10 },
-  input: { borderWidth: 1, padding: 8, marginBottom: 10 },
-  playerItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 5 },
-  removeText: { color: 'red' },
-});
-
 export default ConfigScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: 16,
+  },
+  title: {
+    fontSize: 24,
+    color: colors.text,
+    marginBottom: 16,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  errorText: {
+    color: colors.error,
+    marginBottom: 8,
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: 4,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addButtonText: {
+    color: colors.text,
+    fontSize: 16,
+  },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 4,
+  },
+  playerName: {
+    color: colors.text,
+    fontSize: 16,
+  },
+  removeText: {
+    color: colors.error,
+    fontSize: 16,
+  },
+  startButton: {
+    backgroundColor: colors.secondary,
+    paddingVertical: 14,
+    borderRadius: 4,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  startButtonText: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});

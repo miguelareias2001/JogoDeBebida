@@ -1,15 +1,10 @@
-// Necessary tools
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-
-// Screens
 import { GameProvider } from './context/GameContext';
 import ConfigScreen from './screens/ConfigScreen';
 import GameScreen from './screens/GameScreen';
 import { RootStackParamList } from './types/navigation';
-
-// Constants
-import { GameName, Config} from './constants/gameConfig';
+import { GameName, Config } from './constants/gameConfig';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
