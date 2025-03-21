@@ -19,39 +19,64 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
 
   // Função para iniciar o giro
   const spinBottle = () => {
-    // Reseta o valor de rotação e a opção selecionada
     spinValue.setValue(0);
     setSelectedOption(null);
 
-    // Gera um número aleatório de rotações completas (entre 3 e 6) e um ângulo final
     const fullSpins = Math.floor(Math.random() * 4) + 3; // 3 a 6 voltas
     const segmentAngle = 360 / options.length; // Ângulo por opção
     const randomSegment = Math.floor(Math.random() * options.length); // Segmento aleatório
-    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle;
+    // Ajusta o ângulo final para que a ponta (90° à direita) aponte para o segmento
+    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle - 90;
 
-    // Animação de rotação
     Animated.timing(spinValue, {
       toValue: finalAngle,
-      duration: 3000, // 3 segundos de animação
-      easing: Easing.out(Easing.cubic), // Desaceleração suave
+      duration: 3000,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      // Calcula o ângulo final normalizado (0 a 360°)
-      const normalizedAngle = finalAngle % 360;
+      const normalizedAngle = (finalAngle + 90) % 360; // Ajusta para o segmento
       const selectedIndex = Math.floor(normalizedAngle / segmentAngle);
       setSelectedOption(options[selectedIndex]);
     });
   };
 
-  // Interpolação para aplicar a rotação na imagem
+  // Interpolação para rotação
   const spin = spinValue.interpolate({
     inputRange: [0, 360],
     outputRange: ['0deg', '360deg'],
   });
 
+  // Renderiza os nomes ao redor da garrafa
+  const renderOptions = () => {
+    const radius = 120; // Raio do círculo de nomes
+    return options.map((option, index) => {
+      const angle = (index * (360 / options.length) * Math.PI) / 180; // Ângulo em radianos
+      const x = radius * Math.cos(angle); // Posição X
+      const y = radius * Math.sin(angle); // Posição Y
+
+      return (
+        <Text
+          key={index}
+          style={[
+            styles.optionText,
+            {
+              transform: [{ translateX: x }, { translateY: y }],
+              position: 'absolute',
+            },
+          ]}
+        >
+          {option}
+        </Text>
+      );
+    });
+  };
+
   return (
     <View style={styles.container}>
-      {/* Garrafa giratória (simulada como um retângulo por falta de imagem real) */}
+      {/* Círculo de nomes */}
+      <View style={styles.circle}>{renderOptions()}</View>
+
+      {/* Garrafa giratória */}
       <Animated.View style={[styles.bottle, { transform: [{ rotate: spin }] }]}>
         <View style={styles.bottleShape} />
       </Animated.View>
@@ -61,7 +86,7 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
         <Text style={styles.buttonText}>Girar</Text>
       </TouchableOpacity>
 
-      {/* Exibe o resultado */}
+      {/* Resultado */}
       {selectedOption && (
         <Text style={styles.result}>Selecionado: {selectedOption}</Text>
       )}
@@ -76,8 +101,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  circle: {
+    width: 300,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+  },
   bottle: {
-    width: 200,
+    width: 150,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
@@ -85,8 +122,13 @@ const styles = StyleSheet.create({
   bottleShape: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#8B4513', // Cor marrom para simular uma garrafa
-    borderRadius: 25,
+    backgroundColor: '#8B4513',
+    borderTopLeftRadius: 25,
+    borderBottomLeftRadius: 25,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+    borderRightWidth: 20, // Simula a "ponta" mais larga à direita
+    borderColor: '#8B4513',
   },
   button: {
     marginTop: 20,
