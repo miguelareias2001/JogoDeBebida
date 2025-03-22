@@ -21,25 +21,25 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
   const spinBottle = () => {
     spinValue.setValue(0);
     setSelectedOption(null);
-
-    const fullSpins = Math.floor(Math.random() * 4) + 3; // 3 a 6 voltas
-    const segmentAngle = 360 / options.length; // Ângulo por opção
-    const randomSegment = Math.floor(Math.random() * options.length); // Segmento aleatório
-    // Ajusta o ângulo final para que a ponta (0° à direita) aponte para o segmento
-    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle;
-
+  
+    const fullSpins = Math.floor(Math.random() * 4) + 3; // 3-6 spins
+    const segmentAngle = 360 / options.length;
+    const randomSegment = Math.floor(Math.random() * options.length);
+    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle + 180;
+  
     Animated.timing(spinValue, {
       toValue: finalAngle,
       duration: 3000,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      // Normaliza o ângulo final (0 a 360°)
       const normalizedAngle = finalAngle % 360;
-      // Calcula o índice com base no ângulo, ajustando para o sentido horário
-      const selectedIndex =
-        (options.length - Math.floor(normalizedAngle / segmentAngle)) %
-        options.length;
+      // Calculate the closest segment center
+      const calculatedIndex = Math.round(normalizedAngle / segmentAngle - 0.5);
+      // Handle negative indices and wrap-around
+      const selectedIndex = 
+        (calculatedIndex % options.length + options.length) % options.length;
+      
       setSelectedOption(options[selectedIndex]);
     });
   };
@@ -127,11 +127,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#8B4513',
-    borderTopLeftRadius: 25,
-    borderBottomLeftRadius: 25,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-    borderRightWidth: 20,
+    borderTopRightRadius: 25, // Lado redondo agora à direita
+    borderBottomRightRadius: 25,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+    borderLeftWidth: 20, // Ponta mais larga à esquerda
     borderColor: '#8B4513',
   },
   button: {
