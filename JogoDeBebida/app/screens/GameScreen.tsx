@@ -137,7 +137,7 @@ const GameScreen: React.FC = () => {
   // Otherwise, show the bottle + any message
   return (
     <View style={styles.container}>
-      <SpinningBottle options={["1212","wiuejdn", "wjbedij"]} />
+      <SpinningBottle options={[...players.map((p) => p.name), 'All players drink']} />
       {!!currentResult && (
         <Animated.Text
           style={[
