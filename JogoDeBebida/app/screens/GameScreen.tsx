@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   currentResultText: {
     color: '#fff',
-    fontSize: 22,
+    fontSize: 22,           // temos de mudar alguma coisa nestas definições para que a garrafa não mude de sítio quando o resultado aparece
     textAlign: 'center',
     marginTop: 20,
   },
