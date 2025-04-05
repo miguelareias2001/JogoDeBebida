@@ -135,7 +135,8 @@ const styles = StyleSheet.create({
     borderColor: '#8B4513',
   },
   button: {
-    marginTop: 20,
+    position: 'absolute',
+    bottom: 100,
     padding: 10,
     backgroundColor: '#1E90FF',
     borderRadius: 5,
@@ -145,7 +146,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   result: {
-    marginTop: 20,
+    position: 'absolute',
+    bottom: 50, 
+    left: 0,
+    right: 0,
+    textAlign: 'center',
     fontSize: 18,
     color: '#333',
   },
