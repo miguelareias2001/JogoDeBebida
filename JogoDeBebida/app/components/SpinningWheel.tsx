@@ -25,7 +25,7 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
     const fullSpins = Math.floor(Math.random() * 4) + 3; // 3-6 spins
     const segmentAngle = 360 / options.length;
     const randomSegment = Math.floor(Math.random() * options.length);
-    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle + 180;
+    const finalAngle = fullSpins * 360 + randomSegment * segmentAngle;
   
     Animated.timing(spinValue, {
       toValue: finalAngle,
@@ -35,7 +35,7 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({ options }) => {
     }).start(() => {
       const normalizedAngle = finalAngle % 360;
       // Calculate the closest segment center
-      const calculatedIndex = Math.round(normalizedAngle / segmentAngle - 0.5);
+      const calculatedIndex = Math.round(normalizedAngle / segmentAngle);
       // Handle negative indices and wrap-around
       const selectedIndex = 
         (calculatedIndex % options.length + options.length) % options.length;
