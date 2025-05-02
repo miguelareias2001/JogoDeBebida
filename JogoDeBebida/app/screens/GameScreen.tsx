@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Animated, StyleSheet, Alert } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
 import { useGame } from '../context/GameContext';
 import ReactionChallenge from '../components/ReactionChallenge';
 import colors from '../theme/colors';
@@ -13,65 +13,71 @@ const GameScreen: React.FC = () => {
     getOpponentWithFewestPenalties,
   } = useGame();
 
+  /* ---------- local state ---------- */
   const [showChallenge, setShowChallenge] = useState(false);
+  const [challengePlayers, setChallengePlayers] = useState<{ p1: string; p2: string }>({ p1: '', p2: '' });
   const [currentResult, setCurrentResult] = useState<string>('');
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const animateSelection = () => {
+  const animate = () => {
     scaleAnim.setValue(1);
     Animated.sequence([
       Animated.timing(scaleAnim, { toValue: 1.2, duration: 200, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1,   duration: 200, useNativeDriver: true }),
     ]).start();
   };
 
-  /* Decide what will be spun to */
+  /* Decide the label the bottle will land on ------------- */
   const handleSpinStart = (): string => {
     const rand = Math.random();
-    const fractionAll = 1 / (players.length + 1);
+    const probAll = 1 / (players.length + 1);
+    if (rand < probAll) return 'All players drink';
 
-    if (rand < fractionAll) return 'All players drink';
-
-    const offsetRand = (rand - fractionAll) / (1 - fractionAll);
-    const idx = Math.floor(offsetRand * players.length);
+    const idx = Math.floor(((rand - probAll) / (1 - probAll)) * players.length);
     return players[idx].name;
   };
 
-  /* After spin ends */
-  const handleSpinComplete = (result: string) => {
-    if (result === 'All players drink') {
-      players.forEach((p) => incrementPenalty(p.name));
+  /* After the spin finishes ------------------------------ */
+  const handleSpinComplete = (label: string) => {
+    if (label === 'All players drink') {
+      players.forEach(p => incrementPenalty(p.name));
       setCurrentResult('Todos os jogadores bebem!');
       return;
     }
 
-    /*  --- got a player --- */
-    if (Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY) {
-      const opponent = getOpponentWithFewestPenalties(result);
+    /* label is a player ---------------------------------- */
+    const maybeChallenge = Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY;
+    if (maybeChallenge) {
+      const opponent = getOpponentWithFewestPenalties(label);
       if (opponent) {
-        // you could pass real names; for now just open challenge screen
+        setChallengePlayers({ p1: label, p2: opponent.name });
         setShowChallenge(true);
-        return;
+        return;                // ⬅ nothing else until challenge ends
       }
     }
-    // normal penalty
-    incrementPenalty(result);
-    setCurrentResult(`Jogador atual: ${result}`);
-    animateSelection();
+
+    /* normal penalty ------------------------------------- */
+    incrementPenalty(label);
+    setCurrentResult(`Jogador atual: ${label}`);
+    animate();
   };
 
-  /* After challenge screen */
-  const handleChallengeComplete = (winner: string, loser: string) => {
+  /* When the ReactionChallenge finishes ------------------ */
+  const handleChallengeComplete = (_winner: string, loser: string) => {
     setShowChallenge(false);
     if (loser) incrementPenalty(loser);
     setCurrentResult(`${loser} perdeu o desafio e bebeu!`);
+    animate();
   };
 
+  /* ------------------------------------------------------ */
+  /* Render                                                 */
+  /* ------------------------------------------------------ */
   if (showChallenge) {
     return (
       <ReactionChallenge
-        player1="?"
-        player2="?"
+        player1={challengePlayers.p1}
+        player2={challengePlayers.p2}
         onComplete={handleChallengeComplete}
       />
     );
@@ -79,13 +85,15 @@ const GameScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <SpinningBottle options={[...players.map((p) => p.name), 'All players drink']} />
+      <SpinningBottle
+        options={[...players.map(p => p.name), 'All players drink']}
+        onSpinStart={handleSpinStart}
+        onSpinComplete={handleSpinComplete}
+      />
+
       {!!currentResult && (
         <Animated.Text
-          style={[
-            styles.currentResultText,
-            { transform: [{ scale: scaleAnim }] },
-          ]}
+          style={[styles.resultText, { transform: [{ scale: scaleAnim }] }]}
         >
           {currentResult}
         </Animated.Text>
@@ -96,15 +104,14 @@ const GameScreen: React.FC = () => {
 
 export default GameScreen;
 
+/* ---------------- styles ---------------- */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  currentResultText: {
+  container: { flex: 1, backgroundColor: colors.background },
+  resultText: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    fontSize: 22,
     color: '#fff',
-    fontSize: 22,           // DÚVIDA: estas definições não são redundantes? encontrei o equivalente a isto no "SpinningWheel.tsx"
-    textAlign: 'center',
-    marginTop: 20,
   },
 });
