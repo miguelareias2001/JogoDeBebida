@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, Dimensions } from 'react-native';
-
-// Uncomment these if using expo-av for sounds
-// import { Audio } from 'expo-av';
-
-// Uncomment if using expo-haptics
-// import * as Haptics from 'expo-haptics';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
 
 type Props = {
   player1: string;
@@ -16,63 +17,45 @@ type Props = {
 const BUTTON_SIZE = 50;
 const MARGIN = 40;
 
-const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) => {
-  const [currentPlayer, setCurrentPlayer] = useState<'player1' | 'player2'>('player1');
+const ReactionChallenge: React.FC<Props> = ({
+  player1,
+  player2,
+  onComplete,
+}) => {
+  const [currentPlayer, setCurrentPlayer] =
+    useState<'player1' | 'player2'>('player1');
   const [startTime, setStartTime] = useState<number | null>(null);
-
   const [player1Time, setPlayer1Time] = useState<number | null>(null);
   const [player2Time, setPlayer2Time] = useState<number | null>(null);
 
   const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
-  const screenWidth = Dimensions.get('window').width;
-  const screenHeight = Dimensions.get('window').height;
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-  // Optional: for sounds
-  // const [appearSound, setAppearSound] = useState<Audio.Sound | null>(null);
-
-  // useEffect(() => {
-  //   // Load the sound
-  //   Audio.Sound.createAsync(require('../assets/button_appear.mp3'))
-  //     .then(({ sound }) => setAppearSound(sound))
-  //     .catch(err => console.log('Error loading sound', err));
-  //   return () => {
-  //     if (appearSound) {
-  //       appearSound.unloadAsync();
-  //     }
-  //   };
-  // }, []);
-
+  /* -------------------------------------------------------- */
+  /* Random delay + random position before button appears      */
+  /* -------------------------------------------------------- */
   useEffect(() => {
-    if (currentPlayer !== null) {
-      // Introduce a random delay before the button appears
-      const delay = Math.floor(Math.random() * 2000) + 1000;
-      const timeout = setTimeout(() => {
-        setStartTime(Date.now());
-        
-        // Randomly position the button such that it remains on screen
-        const newTop = Math.random() * (screenHeight - BUTTON_SIZE - MARGIN);
-        const newLeft = Math.random() * (screenWidth - BUTTON_SIZE - MARGIN);
-        setButtonPosition({ top: newTop, left: newLeft });
+    const delay = Math.floor(Math.random() * 2000) + 1000; // 1‑3 s
+    const timeout = setTimeout(() => {
+      setStartTime(Date.now());
 
-        // Optional haptic feedback
-        // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // random location but keep the whole button on‑screen
+      const newTop = Math.random() * (screenHeight - BUTTON_SIZE - MARGIN);
+      const newLeft = Math.random() * (screenWidth - BUTTON_SIZE - MARGIN);
+      setButtonPosition({ top: newTop, left: newLeft });
+    }, delay);
 
-        // Optional play sound
-        // if (appearSound) {
-        //   appearSound.replayAsync();
-        // }
-      }, delay);
-
-      return () => clearTimeout(timeout);
-    }
+    return () => clearTimeout(timeout);
   }, [currentPlayer]);
 
-  // Compare times once both players have reacted
+  /* -------------------------------------------------------- */
+  /* Once both players reacted, decide the winner              */
+  /* -------------------------------------------------------- */
   useEffect(() => {
     if (player1Time !== null && player2Time !== null) {
       if (player1Time === player2Time) {
         Alert.alert('Empate!', 'Ambos devem beber!');
-        onComplete('', ''); // Indicate tie scenario
+        onComplete('', ''); // tie
       } else {
         const winner = player1Time < player2Time ? player1 : player2;
         const loser = player1Time < player2Time ? player2 : player1;
@@ -83,31 +66,35 @@ const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) =>
   }, [player1Time, player2Time]);
 
   const handlePress = () => {
-    if (startTime) {
-      const reactionTime = Date.now() - startTime;
-      if (currentPlayer === 'player1') {
-        setPlayer1Time(reactionTime);
-        setCurrentPlayer('player2');
-        setStartTime(null); // Reset to wait for next player's button
-      } else {
-        setPlayer2Time(reactionTime);
-      }
+    if (!startTime) return;
+
+    const reactionTime = Date.now() - startTime;
+    if (currentPlayer === 'player1') {
+      setPlayer1Time(reactionTime);
+      setCurrentPlayer('player2');
+      setStartTime(null); // wait for next player
+    } else {
+      setPlayer2Time(reactionTime);
     }
   };
 
+  /* ------------------------------- */
+  /* Render                          */
+  /* ------------------------------- */
   return (
     <View style={styles.container}>
       <Text style={styles.instructions}>
         {currentPlayer === 'player1'
-          ? `${player1}, prepara-te!`
-          : `${player2}, prepara-te!`}
+          ? `${player1}, prepara‑te!`
+          : `${player2}, prepara‑te!`}
       </Text>
+
       {startTime && (
         <TouchableOpacity
-          style={[styles.button, {
-            top: buttonPosition.top,
-            left: buttonPosition.left
-          }]}
+          style={[
+            styles.button,
+            { top: buttonPosition.top, left: buttonPosition.left },
+          ]}
           onPress={handlePress}
         />
       )}
@@ -122,18 +109,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20
+    padding: 20,
   },
   instructions: {
     fontSize: 18,
     marginBottom: 20,
-    color: '#FFFFFF'
+    color: '#FFFFFF',
   },
   button: {
     position: 'absolute',
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
     backgroundColor: 'red',
-    borderRadius: BUTTON_SIZE / 2
+    borderRadius: BUTTON_SIZE / 2,
   },
 });

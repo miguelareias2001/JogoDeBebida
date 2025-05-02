@@ -1,105 +1,94 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Animated, StyleSheet, Alert } from 'react-native';
 import { useGame } from '../context/GameContext';
 import ReactionChallenge from '../components/ReactionChallenge';
 import colors from '../theme/colors';
+import GAME_CONFIG from '../constants/gameConfig';
+import SpinningBottle from '../components/SpinningWheel';
 
 const GameScreen: React.FC = () => {
   const {
     players,
-    selectRandomPlayer,
-    getFewestPenaltiesPlayer,
     incrementPenalty,
-    maybeTriggerChallenge,
     getOpponentWithFewestPenalties,
   } = useGame();
-  
-  const [currentPlayerName, setCurrentPlayerName] = useState<string>('');
-  const [showChallenge, setShowChallenge] = useState(false);
-  const [challengePlayers, setChallengePlayers] = useState<{ player1: string; player2: string }>({
-    player1: '',
-    player2: '',
-  });
 
-  // For simple bounce animation on chosen player
+  const [showChallenge, setShowChallenge] = useState(false);
+  const [currentResult, setCurrentResult] = useState<string>('');
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const animateSelection = () => {
     scaleAnim.setValue(1);
     Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.2,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+      Animated.timing(scaleAnim, { toValue: 1.2, duration: 200, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
     ]).start();
   };
 
-  const handleNextRound = () => {
-    const chosenPlayer = selectRandomPlayer();
-    setCurrentPlayerName(chosenPlayer.name);
-    animateSelection();
+  /* Decide what will be spun to */
+  const handleSpinStart = (): string => {
+    const rand = Math.random();
+    const fractionAll = 1 / (players.length + 1);
 
-    if (maybeTriggerChallenge()) {
-      const opponent = getOpponentWithFewestPenalties(chosenPlayer.name);
-      if (opponent) {
-        setChallengePlayers({
-          player1: chosenPlayer.name,
-          player2: opponent.name,
-        });
-        setShowChallenge(true);
-      } else {
-        incrementPenalty(chosenPlayer.name);
-      }
-    } else {
-      incrementPenalty(chosenPlayer.name);
-    }
+    if (rand < fractionAll) return 'All players drink';
+
+    const offsetRand = (rand - fractionAll) / (1 - fractionAll);
+    const idx = Math.floor(offsetRand * players.length);
+    return players[idx].name;
   };
 
+  /* After spin ends */
+  const handleSpinComplete = (result: string) => {
+    if (result === 'All players drink') {
+      players.forEach((p) => incrementPenalty(p.name));
+      setCurrentResult('Todos os jogadores bebem!');
+      return;
+    }
+
+    /*  --- got a player --- */
+    if (Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY) {
+      const opponent = getOpponentWithFewestPenalties(result);
+      if (opponent) {
+        // you could pass real names; for now just open challenge screen
+        setShowChallenge(true);
+        return;
+      }
+    }
+    // normal penalty
+    incrementPenalty(result);
+    setCurrentResult(`Jogador atual: ${result}`);
+    animateSelection();
+  };
+
+  /* After challenge screen */
   const handleChallengeComplete = (winner: string, loser: string) => {
     setShowChallenge(false);
-    // If it's a tie, both players lose
-    if (!winner && !loser) {
-      // tie scenario
-      incrementPenalty(challengePlayers.player1);
-      incrementPenalty(challengePlayers.player2);
-    } else {
-      incrementPenalty(loser);
-    }
-    // Reset for next round
-    setChallengePlayers({ player1: '', player2: '' });
+    if (loser) incrementPenalty(loser);
+    setCurrentResult(`${loser} perdeu o desafio e bebeu!`);
   };
 
-  useEffect(() => {
-  }, []);
+  if (showChallenge) {
+    return (
+      <ReactionChallenge
+        player1="?"
+        player2="?"
+        onComplete={handleChallengeComplete}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {showChallenge ? (
-        <ReactionChallenge
-          player1={challengePlayers.player1}
-          player2={challengePlayers.player2}
-          onComplete={handleChallengeComplete}
-        />
-      ) : (
-        <View style={styles.roundContainer}>
-          <Animated.Text
-            style={[
-              styles.currentPlayer,
-              { transform: [{ scale: scaleAnim }] },
-            ]}
-          >
-            Jogador atual: {currentPlayerName}
-          </Animated.Text>
-          <TouchableOpacity style={styles.nextButton} onPress={handleNextRound}>
-            <Text style={styles.buttonText}>Próxima Rodada</Text>
-          </TouchableOpacity>
-        </View>
+      <SpinningBottle options={[...players.map((p) => p.name), 'All players drink']} />
+      {!!currentResult && (
+        <Animated.Text
+          style={[
+            styles.currentResultText,
+            { transform: [{ scale: scaleAnim }] },
+          ]}
+        >
+          {currentResult}
+        </Animated.Text>
       )}
     </View>
   );
@@ -112,26 +101,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  roundContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  currentPlayer: {
-    color: colors.text,
-    fontSize: 24,
-    marginBottom: 24,
-  },
-  nextButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: 'bold',
+  currentResultText: {
+    color: '#fff',
+    fontSize: 22,           // DÚVIDA: estas definições não são redundantes? encontrei o equivalente a isto no "SpinningWheel.tsx"
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
