@@ -8,6 +8,6 @@ export default {
 };
 
 export const GameName = 'Jogo de Bebida';
-export const Config = 'Configuração';
-export const Remove = 'Remover';
-export const Finish = "Fim";
+export const Config = 'Configuration';
+export const Remove = 'Remove';
+export const Finish = "Finish";
