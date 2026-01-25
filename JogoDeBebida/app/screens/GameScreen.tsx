@@ -1,105 +1,102 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Animated, StyleSheet } from 'react-native';
 import { useGame } from '../context/GameContext';
 import ReactionChallenge from '../components/ReactionChallenge';
 import colors from '../theme/colors';
+import GAME_CONFIG from '../constants/gameConfig';
+import SpinningBottle from '../components/SpinningWheel';
 
 const GameScreen: React.FC = () => {
   const {
     players,
-    selectRandomPlayer,
-    getFewestPenaltiesPlayer,
     incrementPenalty,
-    maybeTriggerChallenge,
     getOpponentWithFewestPenalties,
   } = useGame();
-  
-  const [currentPlayerName, setCurrentPlayerName] = useState<string>('');
-  const [showChallenge, setShowChallenge] = useState(false);
-  const [challengePlayers, setChallengePlayers] = useState<{ player1: string; player2: string }>({
-    player1: '',
-    player2: '',
-  });
 
-  // For simple bounce animation on chosen player
+  /* ---------- local state ---------- */
+  const [showChallenge, setShowChallenge] = useState(false);
+  const [challengePlayers, setChallengePlayers] = useState<{ p1: string; p2: string }>({ p1: '', p2: '' });
+  const [currentResult, setCurrentResult] = useState<string>('');
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const animateSelection = () => {
+  const animate = () => {
     scaleAnim.setValue(1);
     Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.2,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+      Animated.timing(scaleAnim, { toValue: 1.2, duration: 200, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1,   duration: 200, useNativeDriver: true }),
     ]).start();
   };
 
-  const handleNextRound = () => {
-    const chosenPlayer = selectRandomPlayer();
-    setCurrentPlayerName(chosenPlayer.name);
-    animateSelection();
+  /* Decide the label the bottle will land on ------------- */
+  const handleSpinStart = (): string => {
+    const rand = Math.random();
+    const probAll = 1 / (players.length + 1);
+    if (rand < probAll) return 'All players drink';
 
-    if (maybeTriggerChallenge()) {
-      const opponent = getOpponentWithFewestPenalties(chosenPlayer.name);
+    const idx = Math.floor(((rand - probAll) / (1 - probAll)) * players.length);
+    return players[idx].name;
+  };
+
+  /* After the spin finishes ------------------------------ */
+  const handleSpinComplete = (label: string) => {
+    if (label === 'All players drink') {
+      players.forEach(p => incrementPenalty(p.name));
+      setCurrentResult('Todos os jogadores bebem!');
+      return;
+    }
+
+    /* label is a player ---------------------------------- */
+    const maybeChallenge = Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY;
+    if (maybeChallenge) {
+      const opponent = getOpponentWithFewestPenalties(label);
       if (opponent) {
-        setChallengePlayers({
-          player1: chosenPlayer.name,
-          player2: opponent.name,
-        });
+        setChallengePlayers({ p1: label, p2: opponent.name });
         setShowChallenge(true);
-      } else {
-        incrementPenalty(chosenPlayer.name);
+        return;                // ⬅ nothing else until challenge ends
       }
-    } else {
-      incrementPenalty(chosenPlayer.name);
     }
+
+    /* normal penalty ------------------------------------- */
+    incrementPenalty(label);
+    setCurrentResult(`Jogador atual: ${label}`);
+    animate();
   };
 
-  const handleChallengeComplete = (winner: string, loser: string) => {
+  /* When the ReactionChallenge finishes ------------------ */
+  const handleChallengeComplete = (_winner: string, loser: string) => {
     setShowChallenge(false);
-    // If it's a tie, both players lose
-    if (!winner && !loser) {
-      // tie scenario
-      incrementPenalty(challengePlayers.player1);
-      incrementPenalty(challengePlayers.player2);
-    } else {
-      incrementPenalty(loser);
-    }
-    // Reset for next round
-    setChallengePlayers({ player1: '', player2: '' });
+    if (loser) incrementPenalty(loser);
+    setCurrentResult(`${loser} perdeu o desafio e bebeu!`);
+    animate();
   };
 
-  useEffect(() => {
-  }, []);
+  /* ------------------------------------------------------ */
+  /* Render                                                 */
+  /* ------------------------------------------------------ */
+  if (showChallenge) {
+    return (
+      <ReactionChallenge
+        player1={challengePlayers.p1}
+        player2={challengePlayers.p2}
+        onComplete={handleChallengeComplete}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {showChallenge ? (
-        <ReactionChallenge
-          player1={challengePlayers.player1}
-          player2={challengePlayers.player2}
-          onComplete={handleChallengeComplete}
-        />
-      ) : (
-        <View style={styles.roundContainer}>
-          <Animated.Text
-            style={[
-              styles.currentPlayer,
-              { transform: [{ scale: scaleAnim }] },
-            ]}
-          >
-            Jogador atual: {currentPlayerName}
-          </Animated.Text>
-          <TouchableOpacity style={styles.nextButton} onPress={handleNextRound}>
-            <Text style={styles.buttonText}>Próxima Rodada</Text>
-          </TouchableOpacity>
-        </View>
+      <SpinningBottle
+        options={[...players.map(p => p.name), 'All players drink']}
+        onSpinStart={handleSpinStart}
+        onSpinComplete={handleSpinComplete}
+      />
+
+      {!!currentResult && (
+        <Animated.Text
+          style={[styles.resultText, { transform: [{ scale: scaleAnim }] }]}
+        >
+          {currentResult}
+        </Animated.Text>
       )}
     </View>
   );
@@ -107,31 +104,14 @@ const GameScreen: React.FC = () => {
 
 export default GameScreen;
 
+/* ---------------- styles ---------------- */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  roundContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  currentPlayer: {
-    color: colors.text,
-    fontSize: 24,
-    marginBottom: 24,
-  },
-  nextButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: 'bold',
+  container: { flex: 1, backgroundColor: colors.background },
+  resultText: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    fontSize: 22,
+    color: '#fff',
   },
 });

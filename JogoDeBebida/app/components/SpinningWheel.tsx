@@ -1,91 +1,146 @@
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  Animated,
+  Easing,
+  StyleSheet,
+} from 'react-native';
 
-import React, { useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
-import { BlurView } from 'expo-blur';
-
-interface SpinningWheelProps {
-  players: string[];
-  spinning: boolean;
-  onSpinComplete: (player: string) => void;
+interface SpinningBottleProps {
+  options: string[];
+  onSpinStart?: () => string;
+  onSpinComplete?: (result: string) => void;
 }
 
-const SpinningWheel: React.FC<SpinningWheelProps> = ({ players, spinning, onSpinComplete }) => {
+const SpinningBottle: React.FC<SpinningBottleProps> = ({
+  options,
+  onSpinStart,
+  onSpinComplete,
+}) => {
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const spinValue = useRef(new Animated.Value(0)).current;
-  const windowWidth = Dimensions.get('window').width;
-  const wheelSize = windowWidth * 0.8;
 
-  const spin = () => {
-    const randomRotations = 5 + Math.random() * 5; // Between 5-10 rotations
-    const toValue = randomRotations * 360;
-    
+  /* ---------------- spin logic ---------------- */
+  const spinBottle = () => {
+    const forcedLabel = onSpinStart ? onSpinStart() : null;
+
+    const segmentAngle = 360 / options.length;
+    const fullSpins = Math.floor(Math.random() * 4) + 3; // 3‑6 full turns
+
+    // decide which segment: either forced or random
+    const targetIdx = forcedLabel
+      ? options.indexOf(forcedLabel)
+      : Math.floor(Math.random() * options.length);
+
+    const finalAngle = fullSpins * 360 + targetIdx * segmentAngle;
+
+    spinValue.setValue(0);
+    setSelectedOption(null);
+
     Animated.timing(spinValue, {
-      toValue,
+      toValue: finalAngle,
       duration: 3000,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      const finalRotation = toValue % 360;
-      const selectedIndex = Math.floor((finalRotation / (360 / players.length)));
-      onSpinComplete(players[selectedIndex]);
+      const result = options[targetIdx];
+      setSelectedOption(result);
+      if (onSpinComplete) onSpinComplete(result);
     });
   };
 
-  const rotate = spinValue.interpolate({
+  /* -------------- interpolate rotation -------------- */
+  const spin = spinValue.interpolate({
     inputRange: [0, 360],
     outputRange: ['0deg', '360deg'],
   });
 
-  return (
-    <View style={[styles.container, { width: wheelSize, height: wheelSize }]}>
-      <BlurView intensity={100} style={styles.blur}>
-        <Animated.View
+  /* -------------- render labels around circle -------------- */
+  const renderOptions = () => {
+    const radius = 120;
+    return options.map((option, i) => {
+      const angle = (i * 360) / options.length;
+      const rad = (angle * Math.PI) / 180;
+      const x = radius * Math.cos(rad);
+      const y = radius * Math.sin(rad);
+
+      return (
+        <Text
+          key={option}
           style={[
-            styles.wheel,
-            { transform: [{ rotate }] }
+            styles.optionText,
+            { transform: [{ translateX: x }, { translateY: y }] },
           ]}
         >
-          {players.map((player, index) => (
-            <View
-              key={player}
-              style={[
-                styles.segment,
-                {
-                  transform: [
-                    { rotate: `${(360 / players.length) * index}deg` }
-                  ],
-                  backgroundColor: `hsl(${(360 / players.length) * index}, 70%, 50%)`
-                }
-              ]}
-            />
-          ))}
-        </Animated.View>
-      </BlurView>
+          {option}
+        </Text>
+      );
+    });
+  };
+
+  /* ---------------- render ---------------- */
+  return (
+    <View style={styles.container}>
+      <View style={styles.circle}>{renderOptions()}</View>
+
+      <Animated.View style={[styles.bottle, { transform: [{ rotate: spin }] }]}>
+        <View style={styles.bottleShape} />
+      </Animated.View>
+
+      <TouchableOpacity style={styles.button} onPress={spinBottle}>
+        <Text style={styles.buttonText}>Girar</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
+export default SpinningBottle;
+
+/* ---------------- styles ---------------- */
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  blur: {
-    borderRadius: 1000,
-    overflow: 'hidden',
-    flex: 1,
-    width: '100%',
+  circle: {
+    width: 300,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
   },
-  wheel: {
+  optionText: {
+    position: 'absolute',
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+  },
+  bottle: {
+    width: 150,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottleShape: {
     width: '100%',
     height: '100%',
-    borderRadius: 1000,
-    position: 'relative',
+    backgroundColor: '#8B4513',
+    borderTopRightRadius: 25,
+    borderBottomRightRadius: 25,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+    borderLeftWidth: 20,
+    borderColor: '#8B4513',
   },
-  segment: {
+  button: {
     position: 'absolute',
-    width: '50%',
-    height: 2,
-    transformOrigin: 'left center',
+    bottom: 100,
+    padding: 10,
+    backgroundColor: '#1E90FF',
+    borderRadius: 5,
   },
+  buttonText: { color: '#FFF', fontSize: 16 },
 });
-
-export default SpinningWheel;
