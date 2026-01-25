@@ -85,8 +85,8 @@ const ReactionChallenge: React.FC<Props> = ({
     <View style={styles.container}>
       <Text style={styles.instructions}>
         {currentPlayer === 'player1'
-          ? `${player1}, prepara‑te!`
-          : `${player2}, prepara‑te!`}
+          ? `${player1}, Get Ready!`
+          : `${player2}, Get Ready!`}
       </Text>
 
       {startTime && (

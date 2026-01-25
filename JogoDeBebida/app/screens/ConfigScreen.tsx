@@ -31,7 +31,7 @@ const ConfigScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleAdd = () => {
     const ok = addPlayer(playerName);
-    if (!ok) Alert.alert('Erro', 'Nome inválido ou duplicado!');
+    if (!ok) Alert.alert('Error', 'Invalid or duplicate name!');
     setPlayerName('');
   };
 
@@ -39,7 +39,7 @@ const ConfigScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleStart = () => {
     if (players.length < 2) {
-      Alert.alert('Erro', 'Adicione pelo menos dois jogadores.');
+      Alert.alert('Error', 'Add at least two players to start the game.');
       return;
     }
     navigation.navigate('Game');
@@ -47,15 +47,15 @@ const ConfigScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Jogadores</Text>
+      <Text style={styles.title}>Players</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Nome do jogador"
+        placeholder="Player Name"
         value={playerName}
         onChangeText={setPlayerName}
       />
-      <Button title="Adicionar" onPress={handleAdd} />
+      <Button title="Add Player" onPress={handleAdd} />
 
       <FlatList
         data={players}
@@ -71,7 +71,7 @@ const ConfigScreen: React.FC<Props> = ({ navigation }) => {
       />
 
       <Button
-        title="Iniciar Jogo"
+        title="Start Game"
         onPress={handleStart}
         disabled={players.length < 2}
       />

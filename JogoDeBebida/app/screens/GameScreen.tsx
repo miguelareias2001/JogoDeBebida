@@ -41,7 +41,7 @@ const GameScreen: React.FC = () => {
   const handleSpinComplete = (label: string) => {
     if (label === 'All players drink') {
       players.forEach(p => incrementPenalty(p.name));
-      setCurrentResult('Todos os jogadores bebem!');
+      setCurrentResult('Everyone drinks!');
       return;
     }
 
@@ -58,7 +58,7 @@ const GameScreen: React.FC = () => {
 
     /* normal penalty ------------------------------------- */
     incrementPenalty(label);
-    setCurrentResult(`Jogador atual: ${label}`);
+    setCurrentResult(`Current player: ${label}`);
     animate();
   };
 
@@ -66,7 +66,7 @@ const GameScreen: React.FC = () => {
   const handleChallengeComplete = (_winner: string, loser: string) => {
     setShowChallenge(false);
     if (loser) incrementPenalty(loser);
-    setCurrentResult(`${loser} perdeu o desafio e bebeu!`);
+    setCurrentResult(`${loser} lost the challenge and must drink!`);
     animate();
   };
 
