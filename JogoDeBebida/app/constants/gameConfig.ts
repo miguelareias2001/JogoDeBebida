@@ -7,7 +7,7 @@ export default {
   CHALLENGE_PROBABILITY: 0.2,
 };
 
-export const GameName = 'Jogo de Bebida';
+export const GameName = 'Main page';
 export const Config = 'Configuration';
 export const Remove = 'Remove';
 export const Finish = "Finish";

@@ -35,7 +35,7 @@ const ReactionChallenge: React.FC<Props> = ({
   /* Random delay + random position before button appears      */
   /* -------------------------------------------------------- */
   useEffect(() => {
-    const delay = Math.floor(Math.random() * 2000) + 1000; // 1‑3 s
+    const delay = Math.floor(Math.random() * 2000) + 3000; // 3‑6 s
     const timeout = setTimeout(() => {
       setStartTime(Date.now());
 
@@ -54,12 +54,12 @@ const ReactionChallenge: React.FC<Props> = ({
   useEffect(() => {
     if (player1Time !== null && player2Time !== null) {
       if (player1Time === player2Time) {
-        Alert.alert('Empate!', 'Ambos devem beber!');
+        Alert.alert('Tie!', 'Both must drink!');
         onComplete('', ''); // tie
       } else {
         const winner = player1Time < player2Time ? player1 : player2;
         const loser = player1Time < player2Time ? player2 : player1;
-        Alert.alert('Resultado', `${winner} venceu! ${loser} deve beber.`);
+        Alert.alert('Result', `${winner} won! ${loser} must drink.`);
         onComplete(winner, loser);
       }
     }

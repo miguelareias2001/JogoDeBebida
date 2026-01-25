@@ -90,7 +90,7 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({
       </Animated.View>
 
       <TouchableOpacity style={styles.button} onPress={spinBottle}>
-        <Text style={styles.buttonText}>Girar</Text>
+        <Text style={styles.buttonText}>Spin</Text>
       </TouchableOpacity>
     </View>
   );
