@@ -6,7 +6,6 @@ import {
   Animated,
   Easing,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 
 interface SpinningBottleProps {
@@ -15,171 +14,119 @@ interface SpinningBottleProps {
   onSpinComplete?: (result: string) => void;
 }
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const WHEEL_SIZE = Math.min(SCREEN_W - 48, 320);
-const RADIUS = WHEEL_SIZE / 2 - 28;
+// Distinct neon colour per player slot
+const LABEL_COLORS = [
+  '#FF4B6E', // pink
+  '#7A28FF', // purple
+  '#00C9A7', // teal
+  '#FFB800', // amber
+  '#00AEEF', // sky blue
+  '#FF6B35', // orange
+  '#CC00FF', // magenta
+  '#39FF14', // neon green
+];
 
 const SpinningBottle: React.FC<SpinningBottleProps> = ({
   options,
   onSpinStart,
   onSpinComplete,
 }) => {
-  const [isSpinning, setIsSpinning] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const spinValue = useRef(new Animated.Value(0)).current;
-  const totalRotation = useRef(0);
-  const glowAnim = useRef(new Animated.Value(0)).current;
 
-  const pulseGlow = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
-  };
-
-  const stopGlow = () => {
-    glowAnim.stopAnimation();
-    glowAnim.setValue(0);
-  };
-
+  /* ---------------- spin logic — ORIGINAL, untouched ---------------- */
   const spinBottle = () => {
-    if (isSpinning) return;
-
     const forcedLabel = onSpinStart ? onSpinStart() : null;
     const segmentAngle = 360 / options.length;
-    const fullSpins = Math.floor(Math.random() * 4) + 5;
+    const fullSpins = Math.floor(Math.random() * 4) + 3;
 
     const targetIdx = forcedLabel
       ? options.indexOf(forcedLabel)
       : Math.floor(Math.random() * options.length);
 
-    const targetSegmentCenter = targetIdx * segmentAngle + segmentAngle / 2;
-    const delta = fullSpins * 360 + targetSegmentCenter;
-    const newTotal = totalRotation.current + delta;
+    const finalAngle = fullSpins * 360 + targetIdx * segmentAngle;
 
-    setIsSpinning(true);
+    spinValue.setValue(0);
     setSelectedOption(null);
-    pulseGlow();
 
     Animated.timing(spinValue, {
-      toValue: newTotal,
-      duration: 3500,
+      toValue: finalAngle,
+      duration: 3000,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      totalRotation.current = newTotal;
       const result = options[targetIdx];
       setSelectedOption(result);
-      setIsSpinning(false);
-      stopGlow();
       if (onSpinComplete) onSpinComplete(result);
     });
   };
 
+  /* -------------- interpolate rotation — ORIGINAL, untouched -------------- */
   const spin = spinValue.interpolate({
-    inputRange: [totalRotation.current, totalRotation.current + 360],
+    inputRange: [0, 360],
     outputRange: ['0deg', '360deg'],
-    extrapolate: 'extend',
   });
 
-  const glowOpacity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 1],
-  });
-
+  /* -------------- render labels — original positioning, upgraded visuals -------------- */
   const renderOptions = () => {
+    const radius = 120;
     return options.map((option, i) => {
-      const angle = (i * 360) / options.length - 90;
+      const angle = (i * 360) / options.length;
       const rad = (angle * Math.PI) / 180;
-      const x = RADIUS * Math.cos(rad);
-      const y = RADIUS * Math.sin(rad);
+      const x = radius * Math.cos(rad);
+      const y = radius * Math.sin(rad);
       const isAll = option === 'All players drink';
+      const isSelected = selectedOption === option;
+      const color = isAll ? '#FF4B6E' : LABEL_COLORS[i % LABEL_COLORS.length];
 
       return (
         <View
           key={option}
           style={[
-            styles.labelContainer,
+            styles.labelWrapper,
             {
               transform: [{ translateX: x }, { translateY: y }],
+              borderColor: color,
+              shadowColor: color,
+              backgroundColor: isSelected
+                ? color + '30' // 30 = ~19% opacity hex
+                : 'rgba(15,15,15,0.85)',
             },
           ]}
         >
-          <View style={[styles.labelPill, isAll && styles.labelPillAll]}>
-            <Text style={[styles.optionText, isAll && styles.optionTextAll]} numberOfLines={1}>
-              {isAll ? '🍺 ALL' : option}
-            </Text>
-          </View>
+          <Text
+            style={[
+              styles.optionText,
+              { color: isSelected ? '#FFF' : color },
+              isSelected && styles.optionTextSelected,
+            ]}
+            numberOfLines={1}
+          >
+            {isAll ? '🍺' : option}
+          </Text>
+          {isAll && (
+            <Text style={[styles.optionSubText, { color }]}>ALL</Text>
+          )}
         </View>
       );
     });
   };
 
+  /* ---------------- render ---------------- */
   return (
-    <View style={styles.container}>
-      {/* Outer ring glow */}
-      <Animated.View style={[styles.outerGlow, { opacity: glowOpacity }]} />
+    <View style={styles.outer}>
+      <View style={styles.wheelArea}>
+        <View style={styles.circle}>{renderOptions()}</View>
 
-      {/* Wheel ring */}
-      <View style={[styles.wheelRing, { width: WHEEL_SIZE, height: WHEEL_SIZE, borderRadius: WHEEL_SIZE / 2 }]}>
-        {/* Tick marks on ring */}
-        {options.map((_, i) => {
-          const angle = (i * 360) / options.length - 90;
-          return (
-            <View
-              key={i}
-              style={[
-                styles.tickMark,
-                {
-                  transform: [
-                    { rotate: `${angle + 90}deg` },
-                    { translateY: -(WHEEL_SIZE / 2 - 4) },
-                  ],
-                },
-              ]}
-            />
-          );
-        })}
-
-        {/* Spinning group: bottle + labels */}
-        <Animated.View style={[styles.spinnerGroup, { transform: [{ rotate: spin }] }]}>
-          {/* Labels */}
-          {renderOptions()}
-
-          {/* Bottle shape */}
-          <View style={styles.bottleWrapper}>
-            {/* Bottle neck */}
-            <View style={styles.bottleNeck} />
-            {/* Bottle body */}
-            <View style={styles.bottleBody}>
-              <View style={styles.bottleShine} />
-            </View>
-            {/* Bottle cap */}
-            <View style={styles.bottleCap} />
-          </View>
+        <Animated.View style={[styles.bottle, { transform: [{ rotate: spin }] }]}>
+          <View style={styles.bottleBody} />
+          <View style={styles.bottleNeck} />
+          <View style={styles.bottleCap} />
         </Animated.View>
-
-        {/* Center dot */}
-        <View style={styles.centerDot}>
-          <View style={styles.centerDotInner} />
-        </View>
       </View>
 
-      {/* Pointer / indicator at top */}
-      <View style={styles.pointer} />
-
-      {/* Spin button */}
-      <TouchableOpacity
-        style={[styles.spinBtn, isSpinning && styles.spinBtnSpinning]}
-        onPress={spinBottle}
-        disabled={isSpinning}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.spinBtnText}>
-          {isSpinning ? '...' : 'SPIN'}
-        </Text>
+      <TouchableOpacity style={styles.button} onPress={spinBottle}>
+        <Text style={styles.buttonText}>SPIN</Text>
       </TouchableOpacity>
     </View>
   );
@@ -188,194 +135,103 @@ const SpinningBottle: React.FC<SpinningBottleProps> = ({
 export default SpinningBottle;
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
+  outer: {
+    flex: 1,
     justifyContent: 'center',
-    gap: 32,
+    alignItems: 'center',
+    gap: 40,
   },
 
-  outerGlow: {
+  wheelArea: {
+    width: 300,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  circle: {
+    width: 300,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
     position: 'absolute',
-    width: WHEEL_SIZE + 40,
-    height: WHEEL_SIZE + 40,
-    borderRadius: (WHEEL_SIZE + 40) / 2,
-    backgroundColor: '#FF4B6E',
-    top: -20,
-    zIndex: -1,
   },
 
-  wheelRing: {
-    backgroundColor: '#111',
-    borderWidth: 2,
-    borderColor: '#FF4B6E',
-    justifyContent: 'center',
+  /* Label pill — bigger, bolder, with coloured border & glow */
+  labelWrapper: {
+    position: 'absolute',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 22,
+    borderWidth: 1.5,
     alignItems: 'center',
-    shadowColor: '#FF4B6E',
+    justifyContent: 'center',
+    minWidth: 64,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 12,
-    overflow: 'hidden',
-  },
-
-  tickMark: {
-    position: 'absolute',
-    width: 2,
-    height: 10,
-    backgroundColor: '#FF4B6E',
-    borderRadius: 1,
-    top: '50%',
-    left: '50%',
-    marginLeft: -1,
-    marginTop: -5,
-  },
-
-  spinnerGroup: {
-    position: 'absolute',
-    width: WHEEL_SIZE,
-    height: WHEEL_SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  /* Labels */
-  labelContainer: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  labelPill: {
-    backgroundColor: '#1E1E1E',
-    borderWidth: 1,
-    borderColor: '#7A28FF',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    maxWidth: 72,
-  },
-  labelPillAll: {
-    borderColor: '#FF4B6E',
-    backgroundColor: '#2A0A10',
+    shadowOpacity: 0.7,
+    shadowRadius: 8,
+    elevation: 4,
   },
   optionText: {
-    fontSize: 9,
-    color: '#CCC',
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '900',
     textAlign: 'center',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
-  optionTextAll: {
-    color: '#FF4B6E',
-    fontSize: 8,
+  optionTextSelected: {
+    fontSize: 16,
+  },
+  optionSubText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 2,
+    marginTop: 1,
   },
 
   /* Bottle */
-  bottleWrapper: {
-    position: 'absolute',
-    alignItems: 'center',
+  bottle: {
+    width: 150,
+    height: 50,
     flexDirection: 'row',
-    left: '50%',
-    top: '50%',
-    marginTop: -12,
-  },
-  bottleCap: {
-    width: 10,
-    height: 14,
-    backgroundColor: '#FFD700',
-    borderRadius: 3,
-    marginLeft: -1,
-  },
-  bottleNeck: {
-    width: 28,
-    height: 12,
-    backgroundColor: '#2ECC71',
-    borderTopLeftRadius: 3,
-    borderBottomLeftRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   bottleBody: {
-    width: 58,
-    height: 24,
+    width: 90,
+    height: 36,
     backgroundColor: '#27AE60',
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-    overflow: 'hidden',
-    justifyContent: 'center',
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
   },
-  bottleShine: {
-    position: 'absolute',
-    top: 4,
-    left: 8,
-    width: 36,
-    height: 5,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 3,
+  bottleNeck: {
+    width: 30,
+    height: 20,
+    backgroundColor: '#2ECC71',
   },
-
-  /* Center */
-  centerDot: {
-    position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FF4B6E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#FF4B6E',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 5,
-    zIndex: 10,
-  },
-  centerDotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#FFF',
-  },
-
-  /* Pointer */
-  pointer: {
-    position: 'absolute',
-    top: -4,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 18,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#FF4B6E',
-    zIndex: 20,
-    shadowColor: '#FF4B6E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
+  bottleCap: {
+    width: 14,
+    height: 28,
+    backgroundColor: '#FFD700',
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
   },
 
   /* Spin button */
-  spinBtn: {
-    width: 120,
-    height: 52,
-    backgroundColor: '#FF4B6E',
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#FF4B6E',
+  button: {
+    paddingVertical: 16,
+    paddingHorizontal: 52,
+    backgroundColor: '#00C9A7',
+    borderRadius: 30,
+    shadowColor: '#00C9A7',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.6,
     shadowRadius: 14,
     elevation: 10,
   },
-  spinBtnSpinning: {
-    backgroundColor: '#333',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  spinBtnText: {
+  buttonText: {
     color: '#FFF',
     fontSize: 20,
     fontWeight: '900',
-    letterSpacing: 3,
+    letterSpacing: 4,
   },
 });

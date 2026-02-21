@@ -7,13 +7,27 @@ import {
   ScrollView,
   Platform,
   StatusBar,
+  TouchableOpacity,
 } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useGame } from '../context/GameContext';
 import ReactionChallenge from '../components/ReactionChallenge';
 import GAME_CONFIG from '../constants/gameConfig';
 import SpinningBottle from '../components/SpinningWheel';
 
-const GameScreen: React.FC = () => {
+type RootStackParamList = {
+  Config: undefined;
+  Game: undefined;
+  End: undefined;
+};
+
+type NavProp = StackNavigationProp<RootStackParamList, 'Game'>;
+
+interface Props {
+  navigation: NavProp;
+}
+
+const GameScreen: React.FC<Props> = ({ navigation }) => {
   const { players, incrementPenalty, getOpponentWithFewestPenalties } = useGame();
 
   const [showChallenge, setShowChallenge] = useState(false);
@@ -105,8 +119,15 @@ const GameScreen: React.FC = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.roundLabel}>ROUND {roundCount > 0 ? roundCount : '—'}</Text>
-        <Text style={styles.headerTitle}>SPIN IT</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.roundLabel}>ROUND {roundCount > 0 ? roundCount : '—'}</Text>
+            <Text style={styles.headerTitle}>SPIN IT</Text>
+          </View>
+          <TouchableOpacity style={styles.finishBtn} onPress={() => navigation.navigate('End')} activeOpacity={0.8}>
+            <Text style={styles.finishBtnText}>END</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Wheel */}
@@ -188,12 +209,17 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    alignItems: 'center',
+    paddingHorizontal: 24,
     marginBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   roundLabel: {
     fontSize: 11,
-    color: '#FF4B6E',
+    color: '#00C9A7',
     fontWeight: '700',
     letterSpacing: 3,
     marginBottom: 4,
@@ -203,6 +229,20 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#FFF',
     letterSpacing: -1,
+  },
+  finishBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#333',
+    backgroundColor: '#1A1A1A',
+  },
+  finishBtnText: {
+    color: '#666',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 2,
   },
 
   wheelArea: {
@@ -224,8 +264,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     borderWidth: 1.5,
-    borderColor: '#FF4B6E',
-    shadowColor: '#FF4B6E',
+    borderColor: '#00C9A7',
+    shadowColor: '#00C9A7',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -242,7 +282,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '800',
-    color: '#FF4B6E',
+    color: '#00C9A7',
     letterSpacing: 0.3,
   },
   resultTextAll: {
@@ -283,7 +323,7 @@ const styles = StyleSheet.create({
     maxWidth: 70,
   },
   scoreChipBadge: {
-    backgroundColor: '#FF4B6E',
+    backgroundColor: '#00C9A7',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,

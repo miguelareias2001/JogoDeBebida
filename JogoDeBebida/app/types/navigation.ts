@@ -1,7 +1,7 @@
-
 export type RootStackParamList = {
   Config: undefined;
-  Game: { players: string[] };
+  Game: undefined;
+  End: undefined;
 };
 
 const NavigationComponent = () => null;

@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    color: '#FF4B6E',
+    color: '#00C9A7',
     letterSpacing: 3,
     fontWeight: '700',
     marginBottom: 8,
@@ -231,11 +231,11 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 52,
     height: 52,
-    backgroundColor: '#FF4B6E',
+    backgroundColor: '#00C9A7',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF4B6E',
+    shadowColor: '#00C9A7',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 10,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   removeBtnText: {
-    color: '#FF4B6E',
+    color: '#00C9A7',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -319,11 +319,11 @@ const styles = StyleSheet.create({
   /* start button */
   startBtn: {
     height: 60,
-    backgroundColor: '#FF4B6E',
+    backgroundColor: '#00C9A7',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF4B6E',
+    shadowColor: '#00C9A7',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 16,

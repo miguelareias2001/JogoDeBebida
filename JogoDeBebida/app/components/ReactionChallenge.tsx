@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   StyleSheet,
   Dimensions,
   Animated,
@@ -24,8 +23,9 @@ const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) =>
   const [startTime, setStartTime] = useState<number | null>(null);
   const [player1Time, setPlayer1Time] = useState<number | null>(null);
   const [player2Time, setPlayer2Time] = useState<number | null>(null);
-  const [phase, setPhase] = useState<'intro' | 'waiting' | 'ready' | 'done'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'waiting' | 'ready' | 'result'>('intro');
   const [countdown, setCountdown] = useState(3);
+  const [resultData, setResultData] = useState<{ winner: string; loser: string; diff: number; tie: boolean } | null>(null);
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
@@ -105,20 +105,12 @@ const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) =>
   useEffect(() => {
     if (player1Time === null || player2Time === null) return;
 
-    if (player1Time === player2Time) {
-      Alert.alert('🤝 Tie!', 'Both players drink!', [
-        { text: 'Fair enough', onPress: () => onComplete('', '') },
-      ]);
-    } else {
-      const winner = player1Time < player2Time ? player1 : player2;
-      const loser = player1Time < player2Time ? player2 : player1;
-      const diff = Math.abs(player1Time - player2Time);
-      Alert.alert(
-        '🏆 Result!',
-        `${winner} wins by ${diff}ms!\n${loser} DRINKS! 🍺`,
-        [{ text: "Let's go!", onPress: () => onComplete(winner, loser) }]
-      );
-    }
+    const tie = player1Time === player2Time;
+    const winner = player1Time < player2Time ? player1 : player2;
+    const loser = player1Time < player2Time ? player2 : player1;
+    const diff = Math.abs(player1Time - player2Time);
+    setResultData({ winner: tie ? '' : winner, loser: tie ? '' : loser, diff, tie });
+    setPhase('result');
   }, [player1Time, player2Time]);
 
   const handlePress = () => {
@@ -134,7 +126,6 @@ const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) =>
       setStartTime(null);
     } else {
       setPlayer2Time(reactionTime);
-      setPhase('done');
     }
   };
 
@@ -143,6 +134,37 @@ const ReactionChallenge: React.FC<Props> = ({ player1, player2, onComplete }) =>
     inputRange: [0, 1],
     outputRange: ['rgba(255,75,110,0)', 'rgba(255,75,110,0.25)'],
   });
+
+  /* ---- Inline result screen ---- */
+  if (phase === 'result' && resultData) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.resultScreen}>
+          <Text style={styles.resultScreenEmoji}>{resultData.tie ? '🤝' : '🏆'}</Text>
+          <Text style={styles.resultScreenTitle}>
+            {resultData.tie ? 'TIE!' : `${resultData.winner} WINS!`}
+          </Text>
+          <Text style={styles.resultScreenSub}>
+            {resultData.tie
+              ? 'Both players drink!'
+              : `by ${resultData.diff}ms`}
+          </Text>
+          {!resultData.tie && (
+            <View style={styles.drinkBanner}>
+              <Text style={styles.drinkBannerText}>🍺 {resultData.loser} DRINKS!</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.continueBtn}
+            onPress={() => onComplete(resultData.winner, resultData.loser)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.continueBtnText}>CONTINUE</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -346,10 +368,10 @@ const styles = StyleSheet.create({
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
     borderRadius: BUTTON_SIZE / 2,
-    backgroundColor: '#FF4B6E',
+    backgroundColor: '#00C9A7',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF4B6E',
+    shadowColor: '#00C9A7',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 20,
@@ -373,5 +395,71 @@ const styles = StyleSheet.create({
     color: '#444',
     letterSpacing: 2,
     fontWeight: '600',
+  },
+
+  /* inline result screen */
+  resultScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 16,
+  },
+  resultScreenEmoji: {
+    fontSize: 72,
+    marginBottom: 8,
+  },
+  resultScreenTitle: {
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: -1,
+    textAlign: 'center',
+  },
+  resultScreenSub: {
+    fontSize: 16,
+    color: '#666',
+    letterSpacing: 2,
+    fontWeight: '600',
+  },
+  drinkBanner: {
+    backgroundColor: '#2A0A10',
+    borderWidth: 1.5,
+    borderColor: '#FF4B6E',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    marginTop: 8,
+    shadowColor: '#FF4B6E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  drinkBannerText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FF4B6E',
+    letterSpacing: 1,
+  },
+  continueBtn: {
+    marginTop: 24,
+    width: '100%',
+    height: 58,
+    backgroundColor: '#00C9A7',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00C9A7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 3,
   },
 });
