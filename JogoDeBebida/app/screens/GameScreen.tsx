@@ -1,106 +1,156 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  Animated,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  StatusBar,
+} from 'react-native';
 import { useGame } from '../context/GameContext';
 import ReactionChallenge from '../components/ReactionChallenge';
-import colors from '../theme/colors';
+import GAME_CONFIG from '../constants/gameConfig';
+import SpinningBottle from '../components/SpinningWheel';
 
 const GameScreen: React.FC = () => {
-  const {
-    players,
-    selectRandomPlayer,
-    getFewestPenaltiesPlayer,
-    incrementPenalty,
-    maybeTriggerChallenge,
-    getOpponentWithFewestPenalties,
-  } = useGame();
-  
-  const [currentPlayerName, setCurrentPlayerName] = useState<string>('');
+  const { players, incrementPenalty, getOpponentWithFewestPenalties } = useGame();
+
   const [showChallenge, setShowChallenge] = useState(false);
-  const [challengePlayers, setChallengePlayers] = useState<{ player1: string; player2: string }>({
-    player1: '',
-    player2: '',
-  });
+  const [challengePlayers, setChallengePlayers] = useState<{ p1: string; p2: string }>({ p1: '', p2: '' });
+  const [currentResult, setCurrentResult] = useState<string>('');
+  const [resultEmoji, setResultEmoji] = useState<string>('🍺');
+  const [isAllDrink, setIsAllDrink] = useState(false);
+  const [roundCount, setRoundCount] = useState(0);
 
-  // For simple bounce animation on chosen player
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.8)).current;
 
-  const animateSelection = () => {
-    scaleAnim.setValue(1);
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.2,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+  const showResult = (message: string, emoji: string, all = false) => {
+    setCurrentResult(message);
+    setResultEmoji(emoji);
+    setIsAllDrink(all);
+    setRoundCount(r => r + 1);
+
+    cardAnim.setValue(0);
+    cardScale.setValue(0.8);
+    Animated.parallel([
+      Animated.spring(cardAnim, { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
+      Animated.spring(cardScale, { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }),
     ]).start();
   };
 
-  const handleNextRound = () => {
-    const chosenPlayer = selectRandomPlayer();
-    setCurrentPlayerName(chosenPlayer.name);
-    animateSelection();
+  const handleSpinStart = (): string => {
+    const rand = Math.random();
+    const probAll = 1 / (players.length + 1);
+    if (rand < probAll) return 'All players drink';
+    const idx = Math.floor(((rand - probAll) / (1 - probAll)) * players.length);
+    return players[idx].name;
+  };
 
-    if (maybeTriggerChallenge()) {
-      const opponent = getOpponentWithFewestPenalties(chosenPlayer.name);
+  const handleSpinComplete = (label: string) => {
+    if (label === 'All players drink') {
+      players.forEach(p => incrementPenalty(p.name));
+      showResult('Everyone drinks!', '🍻', true);
+      return;
+    }
+
+    const maybeChallenge = Math.random() < GAME_CONFIG.CHALLENGE_PROBABILITY;
+    if (maybeChallenge) {
+      const opponent = getOpponentWithFewestPenalties(label);
       if (opponent) {
-        setChallengePlayers({
-          player1: chosenPlayer.name,
-          player2: opponent.name,
-        });
+        setChallengePlayers({ p1: label, p2: opponent.name });
         setShowChallenge(true);
-      } else {
-        incrementPenalty(chosenPlayer.name);
+        return;
       }
-    } else {
-      incrementPenalty(chosenPlayer.name);
     }
+
+    incrementPenalty(label);
+    showResult(`${label} drinks!`, '🍺');
   };
 
-  const handleChallengeComplete = (winner: string, loser: string) => {
+  const handleChallengeComplete = (_winner: string, loser: string) => {
     setShowChallenge(false);
-    // If it's a tie, both players lose
-    if (!winner && !loser) {
-      // tie scenario
-      incrementPenalty(challengePlayers.player1);
-      incrementPenalty(challengePlayers.player2);
-    } else {
+    if (loser) {
       incrementPenalty(loser);
+      showResult(`${loser} lost the challenge!`, '😵');
+    } else {
+      showResult('Both players drink!', '🍻', true);
     }
-    // Reset for next round
-    setChallengePlayers({ player1: '', player2: '' });
   };
 
-  useEffect(() => {
-  }, []);
+  const cardOpacity = cardAnim;
+  const cardTranslateY = cardAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [30, 0],
+  });
+
+  if (showChallenge) {
+    return (
+      <ReactionChallenge
+        player1={challengePlayers.p1}
+        player2={challengePlayers.p2}
+        onComplete={handleChallengeComplete}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {showChallenge ? (
-        <ReactionChallenge
-          player1={challengePlayers.player1}
-          player2={challengePlayers.player2}
-          onComplete={handleChallengeComplete}
+      <StatusBar barStyle="light-content" />
+
+      {/* bg decorations */}
+      <View style={styles.bgBlob1} />
+      <View style={styles.bgBlob2} />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.roundLabel}>ROUND {roundCount > 0 ? roundCount : '—'}</Text>
+        <Text style={styles.headerTitle}>SPIN IT</Text>
+      </View>
+
+      {/* Wheel */}
+      <View style={styles.wheelArea}>
+        <SpinningBottle
+          options={[...players.map(p => p.name), 'All players drink']}
+          onSpinStart={handleSpinStart}
+          onSpinComplete={handleSpinComplete}
         />
-      ) : (
-        <View style={styles.roundContainer}>
-          <Animated.Text
-            style={[
-              styles.currentPlayer,
-              { transform: [{ scale: scaleAnim }] },
-            ]}
-          >
-            Jogador atual: {currentPlayerName}
-          </Animated.Text>
-          <TouchableOpacity style={styles.nextButton} onPress={handleNextRound}>
-            <Text style={styles.buttonText}>Próxima Rodada</Text>
-          </TouchableOpacity>
-        </View>
+      </View>
+
+      {/* Result card */}
+      {!!currentResult && (
+        <Animated.View
+          style={[
+            styles.resultCard,
+            isAllDrink && styles.resultCardAll,
+            {
+              opacity: cardOpacity,
+              transform: [{ scale: cardScale }, { translateY: cardTranslateY }],
+            },
+          ]}
+        >
+          <Text style={styles.resultEmoji}>{resultEmoji}</Text>
+          <Text style={[styles.resultText, isAllDrink && styles.resultTextAll]}>
+            {currentResult}
+          </Text>
+        </Animated.View>
       )}
+
+      {/* Scoreboard */}
+      <View style={styles.scoreboard}>
+        <Text style={styles.scoreboardTitle}>PENALTIES</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scoreboardInner}>
+          {players.map((p) => (
+            <View key={p.name} style={styles.scoreChip}>
+              <Text style={styles.scoreChipName} numberOfLines={1}>{p.name}</Text>
+              <View style={styles.scoreChipBadge}>
+                <Text style={styles.scoreChipCount}>{p.penalties}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -110,28 +160,139 @@ export default GameScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0D0D0D',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
+    overflow: 'hidden',
   },
-  roundContainer: {
+
+  bgBlob1: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#FF4B6E',
+    opacity: 0.05,
+    top: -60,
+    left: -60,
+  },
+  bgBlob2: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#7A28FF',
+    opacity: 0.07,
+    bottom: 80,
+    right: -50,
+  },
+
+  header: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  roundLabel: {
+    fontSize: 11,
+    color: '#FF4B6E',
+    fontWeight: '700',
+    letterSpacing: 3,
+    marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: -1,
+  },
+
+  wheelArea: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 16,
   },
-  currentPlayer: {
-    color: colors.text,
-    fontSize: 24,
-    marginBottom: 24,
+
+  /* Result card */
+  resultCard: {
+    marginHorizontal: 24,
+    marginBottom: 16,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderWidth: 1.5,
+    borderColor: '#FF4B6E',
+    shadowColor: '#FF4B6E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  nextButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  resultCardAll: {
+    borderColor: '#7A28FF',
+    shadowColor: '#7A28FF',
   },
-  buttonText: {
-    color: colors.text,
+  resultEmoji: {
+    fontSize: 32,
+  },
+  resultText: {
+    flex: 1,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: '#FF4B6E',
+    letterSpacing: 0.3,
+  },
+  resultTextAll: {
+    color: '#7A28FF',
+  },
+
+  /* Scoreboard */
+  scoreboard: {
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  scoreboardTitle: {
+    fontSize: 10,
+    color: '#555',
+    fontWeight: '700',
+    letterSpacing: 3,
+  },
+  scoreboardInner: {
+    gap: 8,
+    paddingRight: 8,
+  },
+  scoreChip: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    minWidth: 70,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  scoreChipName: {
+    color: '#CCC',
+    fontSize: 13,
+    fontWeight: '600',
+    maxWidth: 70,
+  },
+  scoreChipBadge: {
+    backgroundColor: '#FF4B6E',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  scoreChipCount: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '900',
   },
 });
